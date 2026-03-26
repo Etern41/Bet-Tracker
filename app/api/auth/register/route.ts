@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { LIMITS, validateEmail, validatePassword } from "@/lib/validation";
+import {
+  sanitizeEmailInput,
+  sanitizePasswordInput,
+  validateEmail,
+  validatePassword,
+} from "@/lib/validation";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -24,9 +29,12 @@ export async function POST(request: Request) {
     const passwordRaw = (body as { password: unknown }).password;
     const email =
       typeof emailRaw === "string"
-        ? emailRaw.trim().toLowerCase().slice(0, LIMITS.emailMax)
+        ? sanitizeEmailInput(emailRaw).trim().toLowerCase()
         : "";
-    const password = typeof passwordRaw === "string" ? passwordRaw : "";
+    const password =
+      typeof passwordRaw === "string"
+        ? sanitizePasswordInput(passwordRaw)
+        : "";
 
     const eEmail = validateEmail(email);
     if (eEmail) return NextResponse.json({ error: eEmail }, { status: 400 });
