@@ -20,24 +20,35 @@ const config = {
   },
 } as const;
 
-export function BetStatusBadge({ status }: { status: string }) {
+export function BetStatusBadge({
+  status,
+  className,
+}: {
+  status: string;
+  className?: string;
+}) {
   const c = config[status as keyof typeof config];
   if (!c) {
+    const label = labelBetStatus(status);
     return (
       <span
+        title={label}
         className={cn(
-          "inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground"
+          "inline-block max-w-full min-w-0 truncate rounded-full border border-border bg-muted/50 px-2 py-0.5 text-left text-xs font-medium text-foreground align-middle",
+          className
         )}
       >
-        {labelBetStatus(status)}
+        {label}
       </span>
     );
   }
   return (
     <span
+      title={c.label}
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-        c.classes
+        "inline-block max-w-full min-w-0 truncate rounded-full px-2 py-0.5 text-left text-xs font-medium align-middle",
+        c.classes,
+        className
       )}
     >
       {c.label}

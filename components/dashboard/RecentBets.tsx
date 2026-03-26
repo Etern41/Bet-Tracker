@@ -39,14 +39,18 @@ export function RecentBets({ bets, loading }: Props) {
         </Link>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[420px] table-fixed border-separate border-spacing-0 text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">
-              <th className="pb-2 pr-2 font-medium">Матч</th>
-              <th className="pb-2 pr-2 font-medium">Тип</th>
-              <th className="pb-2 pr-2 font-medium">Коэф</th>
-              <th className="pb-2 pr-2 font-medium">Сумма</th>
-              <th className="pb-2 font-medium">Статус</th>
+              <th className="min-w-0 pb-2 pr-2 font-medium [width:38%]">Матч</th>
+              <th className="w-[22%] min-w-[6.5rem] pb-2 pr-2 font-medium">Тип</th>
+              <th className="w-[11%] min-w-[3.25rem] whitespace-nowrap pb-2 pr-2 font-medium">
+                Коэф
+              </th>
+              <th className="w-[14%] min-w-[4.5rem] whitespace-nowrap pb-2 pr-2 text-right font-medium">
+                Сумма
+              </th>
+              <th className="w-[15%] min-w-[5.5rem] pb-2 font-medium">Статус</th>
             </tr>
           </thead>
           <tbody>
@@ -59,20 +63,27 @@ export function RecentBets({ bets, loading }: Props) {
             ) : null}
             {bets.slice(0, 5).map((b) => (
               <tr key={b.id} className="border-b border-border last:border-0">
-                <td className="py-2 pr-2">
-                  <div className="max-w-[200px] truncate font-medium text-foreground">
+                <td className="min-w-0 py-2 pr-2 align-top">
+                  <div
+                    className="break-words font-medium leading-snug text-foreground [overflow-wrap:anywhere]"
+                    title={b.matchTitle}
+                  >
                     {b.matchTitle}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="mt-0.5 whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                     {format(new Date(b.matchDate), "d MMM", { locale: ru })}
                   </div>
                 </td>
-                <td className="py-2 pr-2">
+                <td className="min-w-0 py-2 pr-2 align-top">
                   <BetTypeBadge type={b.betType} />
                 </td>
-                <td className="py-2 pr-2 font-mono">{formatOdds(b.odds)}</td>
-                <td className="py-2 pr-2 font-mono">{formatMoney(b.stake)}</td>
-                <td className="py-2">
+                <td className="whitespace-nowrap py-2 pr-2 align-top font-mono tabular-nums">
+                  {formatOdds(b.odds)}
+                </td>
+                <td className="whitespace-nowrap py-2 pr-2 text-right align-top font-mono tabular-nums">
+                  {formatMoney(b.stake)}
+                </td>
+                <td className="min-w-0 py-2 align-top">
                   <BetStatusBadge status={b.status} />
                 </td>
               </tr>
