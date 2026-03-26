@@ -3,6 +3,10 @@
 import { Cell, Legend, Pie, PieChart, Tooltip, ResponsiveContainer } from "recharts";
 import type { SportShare } from "@/lib/stats";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  rechartsTooltipContentStyle,
+  rechartsTooltipLabelStyle,
+} from "@/lib/recharts-tooltip";
 
 const COLORS = [
   "#3B82F6",
@@ -62,12 +66,14 @@ export function SportDistributionChart({ data, loading }: Props) {
               ))}
             </Pie>
             <Tooltip
+              contentStyle={rechartsTooltipContentStyle}
+              labelStyle={rechartsTooltipLabelStyle}
               formatter={(v) => {
                 const n = typeof v === "number" ? v : Number(v);
                 return [`${Number.isFinite(n) ? n : 0} ставок`, ""];
               }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
           </PieChart>
         </ResponsiveContainer>
       </div>

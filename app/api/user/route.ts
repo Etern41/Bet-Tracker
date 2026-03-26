@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { LIMITS, trimMax, validateDisplayNameInput } from "@/lib/validation";
 
 export async function PATCH(request: Request) {
   const session = await auth();
@@ -19,11 +20,15 @@ export async function PATCH(request: Request) {
       return Response.json({ error: "Неверные данные" }, { status: 400 });
     }
     const nameRaw = (body as { name: unknown }).name;
-    const name =
-      nameRaw === null ? null : typeof nameRaw === "string" ? nameRaw.trim().slice(0, 120) : undefined;
-    if (name === undefined) {
+    if (nameRaw !== null && typeof nameRaw !== "string") {
       return Response.json({ error: "Некорректное имя" }, { status: 400 });
     }
+    const nameErr = validateDisplayNameInput(
+      nameRaw === null ? null : (nameRaw as string)
+    );
+    if (nameErr) return Response.json({ error: nameErr }, { status: 400 });
+    const name =
+      nameRaw === null ? null : trimMax(nameRaw as string, LIMITS.displayName);
 
     const user = await prisma.user.update({
       where: { id: session.user.id },

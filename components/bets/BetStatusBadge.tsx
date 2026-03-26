@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { BET_STATUS_LABELS } from "@/lib/constants";
+import { BET_STATUS_LABELS, labelBetStatus } from "@/lib/constants";
 
 const config = {
   WON: {
@@ -20,8 +20,19 @@ const config = {
   },
 } as const;
 
-export function BetStatusBadge({ status }: { status: keyof typeof config }) {
-  const c = config[status];
+export function BetStatusBadge({ status }: { status: string }) {
+  const c = config[status as keyof typeof config];
+  if (!c) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground"
+        )}
+      >
+        {labelBetStatus(status)}
+      </span>
+    );
+  }
   return (
     <span
       className={cn(

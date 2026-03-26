@@ -1,11 +1,8 @@
 import { cn } from "@/lib/utils";
-import { BET_TYPE_LABELS } from "@/lib/constants";
+import { labelBetType } from "@/lib/constants";
 
 export function BetTypeBadge({ type }: { type: string }) {
-  const label =
-    type in BET_TYPE_LABELS
-      ? BET_TYPE_LABELS[type as keyof typeof BET_TYPE_LABELS]
-      : type;
+  const label = labelBetType(type);
   return (
     <span
       className={cn(

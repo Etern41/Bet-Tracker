@@ -1,6 +1,18 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { BetStatus, BetType, type Prisma } from "@prisma/client";
+import {
+  LIMITS,
+  trimMax,
+  validateExternalMatchId,
+  validateMatchTitle,
+  validateOdds,
+  validateOptionalLeague,
+  validateOptionalTeamField,
+  validateSport,
+  validateSportKey,
+  validateStake,
+} from "@/lib/validation";
 
 const BET_TYPES = new Set<string>(Object.values(BetType));
 const BET_STATUSES = new Set<string>(Object.values(BetStatus));
@@ -35,15 +47,49 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const data: Prisma.BetUpdateInput = {};
 
-    if (typeof b.sport === "string") data.sport = b.sport.trim();
-    if (typeof b.sportKey === "string" || b.sportKey === null) data.sportKey = b.sportKey as string | null;
-    if (typeof b.matchTitle === "string") data.matchTitle = b.matchTitle.trim();
-    if (typeof b.homeTeam === "string" || b.homeTeam === null) data.homeTeam = b.homeTeam as string | null;
-    if (typeof b.awayTeam === "string" || b.awayTeam === null) data.awayTeam = b.awayTeam as string | null;
-    if (typeof b.league === "string" || b.league === null) data.league = b.league as string | null;
+    if (typeof b.sport === "string") {
+      const e = validateSport(b.sport);
+      if (e) return Response.json({ error: e }, { status: 400 });
+      data.sport = trimMax(b.sport, LIMITS.sport);
+    }
+    if (typeof b.sportKey === "string" || b.sportKey === null) {
+      const raw = typeof b.sportKey === "string" ? b.sportKey : null;
+      const e = validateSportKey(raw);
+      if (e) return Response.json({ error: e }, { status: 400 });
+      data.sportKey = raw ? trimMax(raw, LIMITS.sportKey) : null;
+    }
+    if (typeof b.matchTitle === "string") {
+      const e = validateMatchTitle(b.matchTitle);
+      if (e) return Response.json({ error: e }, { status: 400 });
+      data.matchTitle = trimMax(b.matchTitle, LIMITS.matchTitle);
+    }
+    if (typeof b.homeTeam === "string" || b.homeTeam === null) {
+      const t =
+        typeof b.homeTeam === "string" ? trimMax(b.homeTeam, LIMITS.team) : "";
+      const e = validateOptionalTeamField(t || undefined, "homeTeam");
+      if (e) return Response.json({ error: e }, { status: 400 });
+      data.homeTeam = typeof b.homeTeam === "string" ? t || null : null;
+    }
+    if (typeof b.awayTeam === "string" || b.awayTeam === null) {
+      const t =
+        typeof b.awayTeam === "string" ? trimMax(b.awayTeam, LIMITS.team) : "";
+      const e = validateOptionalTeamField(t || undefined, "awayTeam");
+      if (e) return Response.json({ error: e }, { status: 400 });
+      data.awayTeam = typeof b.awayTeam === "string" ? t || null : null;
+    }
+    if (typeof b.league === "string" || b.league === null) {
+      const t =
+        typeof b.league === "string" ? trimMax(b.league, LIMITS.league) : "";
+      const e = validateOptionalLeague(t || undefined);
+      if (e) return Response.json({ error: e }, { status: 400 });
+      data.league = typeof b.league === "string" ? t || null : null;
+    }
     if (typeof b.matchDate === "string" || b.matchDate instanceof Date) {
       const d = new Date(b.matchDate as string | Date);
-      if (!Number.isNaN(d.getTime())) data.matchDate = d;
+      if (Number.isNaN(d.getTime())) {
+        return Response.json({ error: "Некорректная дата матча" }, { status: 400 });
+      }
+      data.matchDate = d;
     }
     if (typeof b.betType === "string" && BET_TYPES.has(b.betType)) {
       data.betType = b.betType as BetType;
@@ -61,10 +107,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     if (typeof b.notes === "string" || b.notes === null) {
       data.notes =
-        typeof b.notes === "string" ? b.notes.slice(0, 300) : null;
+        typeof b.notes === "string" ? trimMax(b.notes, LIMITS.notes) || null : null;
     }
     if (typeof b.externalMatchId === "string" || b.externalMatchId === null) {
-      data.externalMatchId = b.externalMatchId as string | null;
+      const raw =
+        typeof b.externalMatchId === "string" ? b.externalMatchId : null;
+      const e = validateExternalMatchId(raw);
+      if (e) return Response.json({ error: e }, { status: 400 });
+      data.externalMatchId = raw ? trimMax(raw, LIMITS.externalMatchId) : null;
     }
 
     const nextOdds =
@@ -80,14 +130,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       nextStatus = b.status as BetStatus;
     }
 
-    if (
-      !Number.isFinite(nextOdds) ||
-      !Number.isFinite(nextStake) ||
-      nextOdds <= 1 ||
-      nextStake <= 0
-    ) {
-      return Response.json({ error: "Некорректные коэффициент или сумма" }, { status: 400 });
-    }
+    const eO = validateOdds(nextOdds);
+    if (eO) return Response.json({ error: eO }, { status: 400 });
+    const eS = validateStake(nextStake);
+    if (eS) return Response.json({ error: eS }, { status: 400 });
 
     let winnings: number | null = existing.winnings;
     if (nextStatus === BetStatus.WON) {

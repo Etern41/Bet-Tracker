@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { LIMITS, validateEmail, validatePassword } from "@/lib/validation";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -21,18 +22,16 @@ export async function POST(request: Request) {
     }
     const emailRaw = (body as { email: unknown }).email;
     const passwordRaw = (body as { password: unknown }).password;
-    const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : "";
+    const email =
+      typeof emailRaw === "string"
+        ? emailRaw.trim().toLowerCase().slice(0, LIMITS.emailMax)
+        : "";
     const password = typeof passwordRaw === "string" ? passwordRaw : "";
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Укажите корректный email" }, { status: 400 });
-    }
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: "Пароль должен быть не короче 8 символов" },
-        { status: 400 }
-      );
-    }
+    const eEmail = validateEmail(email);
+    if (eEmail) return NextResponse.json({ error: eEmail }, { status: 400 });
+    const ePass = validatePassword(password);
+    if (ePass) return NextResponse.json({ error: ePass }, { status: 400 });
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {

@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SPORTS_RU } from "@/lib/constants";
+import { LIMITS } from "@/lib/validation";
 import {
   extractBestOdds,
   parseBookmakersFromCache,
@@ -198,7 +199,7 @@ export function MatchPicker({ open, onOpenChange, onSelect }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] min-w-0 max-w-[calc(100vw-2rem)] overflow-hidden border-border bg-card sm:max-w-lg md:max-w-2xl">
+      <DialogContent className="max-h-[90vh] min-w-0 max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto border-border bg-card sm:max-w-lg md:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Выбрать матч</DialogTitle>
         </DialogHeader>
@@ -239,8 +240,9 @@ export function MatchPicker({ open, onOpenChange, onSelect }: Props) {
           <Input
             placeholder="Поиск по команде…"
             value={search}
+            maxLength={LIMITS.searchQuery}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 border-border bg-background/80 dark:bg-input/40"
+            className="h-9 min-w-0 max-w-full border-border bg-background/80 dark:bg-input/40"
           />
 
           <div className="min-h-[200px]">

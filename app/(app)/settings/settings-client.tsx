@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LIMITS, validateDisplayNameInput } from "@/lib/validation";
 
 type Props = {
   email: string;
@@ -22,12 +23,18 @@ export function SettingsClient({ email, initialName, oddsConfigured }: Props) {
   async function saveName(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const trimmed = name.trim();
+    const v = validateDisplayNameInput(trimmed === "" ? null : name);
+    if (v) {
+      setError(v);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/user", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || null }),
+        body: JSON.stringify({ name: trimmed || null }),
       });
       const data: unknown = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -51,7 +58,7 @@ export function SettingsClient({ email, initialName, oddsConfigured }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="mx-auto min-w-0 max-w-2xl space-y-8">
       <Card className="border-border bg-card card-shadow">
         <CardHeader>
           <CardTitle className="page-title">Профиль</CardTitle>
@@ -69,8 +76,9 @@ export function SettingsClient({ email, initialName, oddsConfigured }: Props) {
               <Label htmlFor="name">Сменить имя</Label>
               <Input
                 id="name"
-                className="h-9 max-w-md"
+                className="h-9 min-w-0 max-w-full sm:max-w-md"
                 value={name}
+                maxLength={LIMITS.displayName}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ваше имя"
               />

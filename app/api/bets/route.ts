@@ -1,6 +1,18 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { BetStatus, BetType, type Prisma } from "@prisma/client";
+import {
+  LIMITS,
+  trimMax,
+  validateExternalMatchId,
+  validateMatchTitle,
+  validateOdds,
+  validateOptionalLeague,
+  validateOptionalTeamField,
+  validateSport,
+  validateSportKey,
+  validateStake,
+} from "@/lib/validation";
 
 const BET_TYPES = new Set<string>(Object.values(BetType));
 const BET_STATUSES = new Set<string>(Object.values(BetStatus));
@@ -19,7 +31,11 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sport = searchParams.get("sport") ?? undefined;
-    const search = searchParams.get("search")?.trim();
+    const searchRaw = searchParams.get("search")?.trim() ?? "";
+    const search =
+      searchRaw.length > LIMITS.searchQuery
+        ? searchRaw.slice(0, LIMITS.searchQuery)
+        : searchRaw;
     const betType = parseEnum<BetType>(searchParams.get("betType"), BET_TYPES);
     const status = parseEnum<BetStatus>(searchParams.get("status"), BET_STATUSES);
     const from = searchParams.get("from");
@@ -89,8 +105,8 @@ export async function POST(request: Request) {
     }
     const b = body as Record<string, unknown>;
 
-    const sport = typeof b.sport === "string" ? b.sport.trim() : "";
-    const matchTitle = typeof b.matchTitle === "string" ? b.matchTitle.trim() : "";
+    const sport = typeof b.sport === "string" ? b.sport : "";
+    const matchTitle = typeof b.matchTitle === "string" ? b.matchTitle : "";
     const betType = typeof b.betType === "string" ? b.betType : "";
     const odds = typeof b.odds === "number" ? b.odds : Number(b.odds);
     const stake = typeof b.stake === "number" ? b.stake : Number(b.stake);
@@ -100,42 +116,64 @@ export async function POST(request: Request) {
         ? new Date(matchDateRaw as string | Date)
         : null;
 
-    if (!sport || !matchTitle || !betType || !BET_TYPES.has(betType)) {
-      return Response.json({ error: "Проверьте обязательные поля" }, { status: 400 });
+    const eSport = validateSport(sport);
+    if (eSport) return Response.json({ error: eSport }, { status: 400 });
+    const eTitle = validateMatchTitle(matchTitle);
+    if (eTitle) return Response.json({ error: eTitle }, { status: 400 });
+    if (!betType || !BET_TYPES.has(betType)) {
+      return Response.json({ error: "Некорректный тип ставки" }, { status: 400 });
     }
     if (!matchDate || Number.isNaN(matchDate.getTime())) {
       return Response.json({ error: "Некорректная дата матча" }, { status: 400 });
     }
-    if (!(odds > 1)) {
-      return Response.json({ error: "Коэффициент должен быть больше 1" }, { status: 400 });
-    }
-    if (!(stake > 0)) {
-      return Response.json({ error: "Сумма ставки должна быть положительной" }, { status: 400 });
-    }
+    const eOdds = validateOdds(odds);
+    if (eOdds) return Response.json({ error: eOdds }, { status: 400 });
+    const eStake = validateStake(stake);
+    if (eStake) return Response.json({ error: eStake }, { status: 400 });
+
+    const sportKeyStr = typeof b.sportKey === "string" ? b.sportKey : null;
+    const eSk = validateSportKey(sportKeyStr);
+    if (eSk) return Response.json({ error: eSk }, { status: 400 });
+
+    const homeT = typeof b.homeTeam === "string" ? trimMax(b.homeTeam, LIMITS.team) : "";
+    const awayT = typeof b.awayTeam === "string" ? trimMax(b.awayTeam, LIMITS.team) : "";
+    const eH = validateOptionalTeamField(homeT || undefined, "homeTeam");
+    if (eH) return Response.json({ error: eH }, { status: 400 });
+    const eA = validateOptionalTeamField(awayT || undefined, "awayTeam");
+    if (eA) return Response.json({ error: eA }, { status: 400 });
+
+    const leagueStr = typeof b.league === "string" ? trimMax(b.league, LIMITS.league) : "";
+    const eL = validateOptionalLeague(leagueStr || undefined);
+    if (eL) return Response.json({ error: eL }, { status: 400 });
+
+    const extId = typeof b.externalMatchId === "string" ? b.externalMatchId : null;
+    const eExt = validateExternalMatchId(extId);
+    if (eExt) return Response.json({ error: eExt }, { status: 400 });
+
+    const notesRaw = typeof b.notes === "string" ? trimMax(b.notes, LIMITS.notes) : "";
 
     const statusRaw = typeof b.status === "string" ? b.status : "PENDING";
     const status = BET_STATUSES.has(statusRaw) ? (statusRaw as BetStatus) : BetStatus.PENDING;
 
-    const winnings =
-      status === BetStatus.WON ? stake * (odds - 1) : null;
+    const winnings = status === BetStatus.WON ? stake * (odds - 1) : null;
 
     const bet = await prisma.bet.create({
       data: {
         userId: session.user.id,
-        sport,
-        sportKey: typeof b.sportKey === "string" ? b.sportKey : null,
-        matchTitle,
-        homeTeam: typeof b.homeTeam === "string" ? b.homeTeam : null,
-        awayTeam: typeof b.awayTeam === "string" ? b.awayTeam : null,
-        league: typeof b.league === "string" ? b.league : null,
+        sport: trimMax(sport, LIMITS.sport),
+        sportKey: sportKeyStr ? trimMax(sportKeyStr, LIMITS.sportKey) : null,
+        matchTitle: trimMax(matchTitle, LIMITS.matchTitle),
+        homeTeam: homeT || null,
+        awayTeam: awayT || null,
+        league: leagueStr || null,
         matchDate,
         betType: betType as BetType,
         odds,
         stake,
         status,
         winnings,
-        notes: typeof b.notes === "string" ? b.notes.slice(0, 300) : null,
-        externalMatchId: typeof b.externalMatchId === "string" ? b.externalMatchId : null,
+        notes: notesRaw || null,
+        externalMatchId: extId ? trimMax(extId, LIMITS.externalMatchId) : null,
       },
     });
 

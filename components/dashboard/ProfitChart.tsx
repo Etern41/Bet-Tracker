@@ -14,6 +14,10 @@ import {
 } from "recharts";
 import type { DayProfit } from "@/lib/stats";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  rechartsTooltipContentStyle,
+  rechartsTooltipLabelStyle,
+} from "@/lib/recharts-tooltip";
 
 type Props = {
   data: DayProfit[];
@@ -58,6 +62,8 @@ export function ProfitChart({ data, loading }: Props) {
               className="text-muted-foreground"
             />
             <Tooltip
+              contentStyle={rechartsTooltipContentStyle}
+              labelStyle={rechartsTooltipLabelStyle}
               formatter={(v, name) => {
                 const num = typeof v === "number" ? v : Number(v);
                 const safe = Number.isFinite(num) ? num : 0;
@@ -68,7 +74,7 @@ export function ProfitChart({ data, loading }: Props) {
                 ];
               }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ color: "hsl(var(--foreground))" }} />
             <ReferenceLine y={0} stroke="hsl(var(--border))" />
             <Area
               type="monotone"

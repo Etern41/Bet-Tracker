@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LIMITS, validateEmail, validatePassword } from "@/lib/validation";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -19,6 +20,16 @@ export default function RegisterPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const eEmail = validateEmail(email);
+    if (eEmail) {
+      setError(eEmail);
+      return;
+    }
+    const ePass = validatePassword(password);
+    if (ePass) {
+      setError(ePass);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -58,8 +69,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md border-border card-shadow">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full min-w-0 max-w-md border-border card-shadow">
         <CardHeader>
           <CardTitle className="page-title">Регистрация</CardTitle>
           <CardDescription className="text-muted-foreground">
@@ -75,6 +86,7 @@ export default function RegisterPage() {
                 type="email"
                 autoComplete="email"
                 value={email}
+                maxLength={LIMITS.emailMax}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="h-10 px-3"
@@ -87,9 +99,10 @@ export default function RegisterPage() {
                 type="password"
                 autoComplete="new-password"
                 value={password}
+                maxLength={LIMITS.passwordMax}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
+                minLength={LIMITS.passwordMin}
                 className="h-10 px-3"
               />
               <p className="text-xs text-muted-foreground">Минимум 8 символов</p>

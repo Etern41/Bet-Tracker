@@ -37,3 +37,12 @@ export const BET_STATUS_LABELS: Record<string, string> = {
   LOST: "Проиграна",
   VOID: "Возврат",
 };
+
+/** Подпись для UI — никогда не показывать сырое значение enum. */
+export function labelBetType(code: string): string {
+  return BET_TYPE_LABELS[code] ?? "Тип ставки";
+}
+
+export function labelBetStatus(code: string): string {
+  return BET_STATUS_LABELS[code] ?? "Статус";
+}

@@ -3,7 +3,18 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BET_TYPE_LABELS, BET_STATUS_LABELS } from "@/lib/constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BET_TYPE_LABELS, BET_STATUS_LABELS, labelBetType, labelBetStatus } from "@/lib/constants";
+import { LIMITS } from "@/lib/validation";
+
+/** Значение «все» в Select — не пересекается с названиями лиг из данных. */
+const FILTER_ALL = "__filter_all__";
 
 export type BetFiltersState = {
   search: string;
@@ -21,6 +32,9 @@ type Props = {
   /** false — без sticky (например, дашборд). По умолчанию true. */
   sticky?: boolean;
 };
+
+const fieldClass =
+  "h-9 w-full min-w-0 border-border bg-background text-foreground dark:bg-input/40";
 
 export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Props) {
   const [localSearch, setLocalSearch] = useState(value.search);
@@ -75,67 +89,95 @@ export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Pro
           <label className="section-label mb-1 block">Поиск</label>
           <Input
             placeholder="Поиск по матчу…"
-            className="h-9"
+            className={fieldClass}
             value={localSearch}
+            maxLength={LIMITS.searchQuery}
             onChange={(e) => setLocalSearch(e.target.value)}
           />
         </div>
-        <div className="min-w-[140px]">
-          <label className="section-label mb-1 block">Спорт</label>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            value={value.sport}
-            onChange={(e) =>
-              onChange((prev) => ({ ...prev, sport: e.target.value }))
+        <div className="min-w-[160px]">
+          <label className="section-label mb-1 block">Спорт / лига</label>
+          <Select
+            value={value.sport === "" ? FILTER_ALL : value.sport}
+            onValueChange={(v) =>
+              onChange((prev) => ({
+                ...prev,
+                sport: !v || v === FILTER_ALL ? "" : v,
+              }))
             }
           >
-            <option value="">Все виды спорта</option>
-            {sportOptions.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className={`${fieldClass} px-3 font-normal`}>
+              <SelectValue>
+                {value.sport === "" ? "Все из списка" : value.sport}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={FILTER_ALL}>Все из списка</SelectItem>
+              {sportOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="min-w-[140px]">
-          <label className="section-label mb-1 block">Тип</label>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            value={value.betType}
-            onChange={(e) =>
-              onChange((prev) => ({ ...prev, betType: e.target.value }))
+        <div className="min-w-[160px]">
+          <label className="section-label mb-1 block">Тип ставки</label>
+          <Select
+            value={value.betType === "" ? FILTER_ALL : value.betType}
+            onValueChange={(v) =>
+              onChange((prev) => ({
+                ...prev,
+                betType: !v || v === FILTER_ALL ? "" : v,
+              }))
             }
           >
-            <option value="">Все типы</option>
-            {Object.entries(BET_TYPE_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className={`${fieldClass} px-3 font-normal`}>
+              <SelectValue>
+                {value.betType === "" ? "Все типы" : labelBetType(value.betType)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={FILTER_ALL}>Все типы</SelectItem>
+              {Object.entries(BET_TYPE_LABELS).map(([k, lab]) => (
+                <SelectItem key={k} value={k}>
+                  {lab}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="min-w-[140px]">
+        <div className="min-w-[160px]">
           <label className="section-label mb-1 block">Статус</label>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            value={value.status}
-            onChange={(e) =>
-              onChange((prev) => ({ ...prev, status: e.target.value }))
+          <Select
+            value={value.status === "" ? FILTER_ALL : value.status}
+            onValueChange={(v) =>
+              onChange((prev) => ({
+                ...prev,
+                status: !v || v === FILTER_ALL ? "" : v,
+              }))
             }
           >
-            <option value="">Все статусы</option>
-            {Object.entries(BET_STATUS_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className={`${fieldClass} px-3 font-normal`}>
+              <SelectValue>
+                {value.status === "" ? "Все статусы" : labelBetStatus(value.status)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={FILTER_ALL}>Все статусы</SelectItem>
+              {Object.entries(BET_STATUS_LABELS).map(([k, lab]) => (
+                <SelectItem key={k} value={k}>
+                  {lab}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="min-w-[130px]">
           <label className="section-label mb-1 block">С даты</label>
           <Input
             type="date"
-            className="h-9"
+            className={fieldClass}
             value={value.from}
             onChange={(e) =>
               onChange((prev) => ({ ...prev, from: e.target.value }))
@@ -146,7 +188,7 @@ export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Pro
           <label className="section-label mb-1 block">По дату</label>
           <Input
             type="date"
-            className="h-9"
+            className={fieldClass}
             value={value.to}
             onChange={(e) =>
               onChange((prev) => ({ ...prev, to: e.target.value }))

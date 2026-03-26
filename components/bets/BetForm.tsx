@@ -28,9 +28,27 @@ import {
   BET_TYPE_LABELS,
   BET_STATUS_LABELS,
   SPORTS_RU,
+  labelBetType,
+  labelBetStatus,
 } from "@/lib/constants";
 import { formatOdds } from "@/lib/utils";
 import type { BetRow } from "@/components/bets/types";
+import {
+  LIMITS,
+  validateMatchTitle,
+  validateOdds,
+  validateOptionalLeague,
+  validateSport,
+  validateStake,
+} from "@/lib/validation";
+
+function clampDecimalInput(raw: string, maxLen: number): string {
+  const s0 = raw.replace(/[^\d.,]/g, "").replace(",", ".");
+  const dot = s0.indexOf(".");
+  const s =
+    dot === -1 ? s0 : s0.slice(0, dot + 1) + s0.slice(dot + 1).replace(/\./g, "");
+  return s.length > maxLen ? s.slice(0, maxLen) : s;
+}
 
 const BET_TYPES = ["WINNER", "TOTAL_OVER", "TOTAL_UNDER", "HANDICAP", "BTTS"] as const;
 const BET_STATUSES = ["PENDING", "WON", "LOST", "VOID"] as const;
@@ -170,14 +188,20 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
 
   function validate(): boolean {
     const err: Record<string, string> = {};
-    if (!sport.trim()) err.sport = "Укажите вид спорта";
-    if (!matchTitle.trim()) err.matchTitle = "Укажите матч";
+    const es = validateSport(sport);
+    if (es) err.sport = es;
+    const em = validateMatchTitle(matchTitle);
+    if (em) err.matchTitle = em;
+    const el = validateOptionalLeague(league || undefined);
+    if (el) err.league = el;
     const md = new Date(matchDate);
     if (!matchDate || Number.isNaN(md.getTime())) err.matchDate = "Укажите дату матча";
     const o = Number(odds.replace(",", "."));
-    if (!Number.isFinite(o) || o <= 1) err.odds = "Коэффициент должен быть больше 1.0";
+    const eo = validateOdds(o);
+    if (eo) err.odds = eo;
     const st = Number(stake.replace(",", "."));
-    if (!Number.isFinite(st) || st <= 0) err.stake = "Сумма ставки должна быть положительной";
+    const est = validateStake(st);
+    if (est) err.stake = est;
     setFieldErrors(err);
     return Object.keys(err).length === 0;
   }
@@ -215,7 +239,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
       odds: o,
       stake: st,
       status,
-      notes: notes.slice(0, 300) || undefined,
+      notes: notes.slice(0, LIMITS.notes) || undefined,
       externalMatchId: externalMatchId ?? undefined,
     };
 
@@ -251,16 +275,17 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
   }
 
   const inputClass =
-    "h-9 px-3 border border-input rounded-md bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring";
+    "h-9 min-w-0 max-w-full overflow-x-auto px-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring dark:bg-input/45";
+  const inputTextClass = `${inputClass} break-all`;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] min-w-0 overflow-x-hidden overflow-y-auto border-border bg-card sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{isEdit ? "Редактировать ставку" : "Добавить ставку"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="min-w-0 max-w-full space-y-4">
             <div className="space-y-2">
               <Label>Вид спорта</Label>
               {oddsConfigured && sportsApi.length > 0 && !sportManual ? (
@@ -275,7 +300,14 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                     }}
                   >
                     <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
-                      <SelectValue placeholder="Выберите лигу/спорт" />
+                      <SelectValue placeholder="Выберите лигу/спорт">
+                        {sportKey
+                          ? (sport.trim() ||
+                              SPORTS_RU[sportKey] ||
+                              sportsApi.find((x) => x.key === sportKey)?.title ||
+                              "Лига / спорт")
+                          : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {sportsApi.map((s) => (
@@ -299,8 +331,9 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 <div className="space-y-2">
                   <Input
                     list="manual-sports"
-                    className={inputClass}
+                    className={inputTextClass}
                     value={sport}
+                    maxLength={LIMITS.sport}
                     onChange={(e) => {
                       setSport(e.target.value);
                       setSportKey(null);
@@ -332,8 +365,9 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
             <div className="space-y-2">
               <Label>Матч</Label>
               <Input
-                className={inputClass}
+                className={inputTextClass}
                 value={matchTitle}
+                maxLength={LIMITS.matchTitle}
                 onChange={(e) => setMatchTitle(e.target.value)}
                 required
               />
@@ -350,10 +384,14 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
             <div className="space-y-2">
               <Label>Лига (необязательно)</Label>
               <Input
-                className={inputClass}
+                className={inputTextClass}
                 value={league}
+                maxLength={LIMITS.league}
                 onChange={(e) => setLeague(e.target.value)}
               />
+              {fieldErrors.league ? (
+                <p className="text-sm text-destructive">{fieldErrors.league}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -374,7 +412,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               <Label>Тип ставки</Label>
               <Select value={betType} onValueChange={(v) => setBetType(v as BetType)}>
                 <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
-                  <SelectValue />
+                  <SelectValue>{labelBetType(betType)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {BET_TYPES.map((t) => (
@@ -392,7 +430,8 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 className={`font-mono ${inputClass}`}
                 inputMode="decimal"
                 value={odds}
-                onChange={(e) => setOdds(e.target.value)}
+                maxLength={16}
+                onChange={(e) => setOdds(clampDecimalInput(e.target.value, 16))}
                 min={1.01}
                 step={0.01}
                 required
@@ -418,7 +457,8 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 className={`font-mono ${inputClass}`}
                 inputMode="decimal"
                 value={stake}
-                onChange={(e) => setStake(e.target.value)}
+                maxLength={18}
+                onChange={(e) => setStake(clampDecimalInput(e.target.value, 18))}
                 min={0.01}
                 step={0.01}
                 required
@@ -437,7 +477,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               <Label>Статус</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as BetStatus)}>
                 <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
-                  <SelectValue />
+                  <SelectValue>{labelBetStatus(status)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {BET_STATUSES.map((s) => (
@@ -452,8 +492,8 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
             <div className="space-y-2">
               <Label>Заметки</Label>
               <Textarea
-                className="min-h-[80px] border-input rounded-md bg-transparent text-foreground"
-                maxLength={300}
+                className="min-h-[80px] min-w-0 max-w-full border border-input rounded-md bg-background text-foreground dark:bg-input/45"
+                maxLength={LIMITS.notes}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />

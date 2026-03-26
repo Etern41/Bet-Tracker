@@ -12,6 +12,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  rechartsTooltipContentStyle,
+  rechartsTooltipLabelStyle,
+} from "@/lib/recharts-tooltip";
 
 export type StreakPoint = { idx: number; delta: number };
 
@@ -53,6 +57,8 @@ export function StreakChart({ data, loading }: Props) {
             <XAxis dataKey="idx" tick={{ fontSize: 10 }} hide />
             <YAxis domain={[-1.2, 1.2]} ticks={[-1, 0, 1]} tick={{ fontSize: 11 }} />
             <Tooltip
+              contentStyle={rechartsTooltipContentStyle}
+              labelStyle={rechartsTooltipLabelStyle}
               formatter={(v) => {
                 const n = typeof v === "number" ? v : Number(v);
                 return [n > 0 ? "Победа" : "Поражение", "Исход"];

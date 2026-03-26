@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LIMITS } from "@/lib/validation";
 
 export function LoginForm() {
   const router = useRouter();
@@ -43,8 +44,8 @@ export function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md border-border card-shadow">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full min-w-0 max-w-md border-border card-shadow">
         <CardHeader>
           <CardTitle className="page-title">Вход</CardTitle>
           <CardDescription className="text-muted-foreground">
@@ -60,6 +61,7 @@ export function LoginForm() {
                 type="email"
                 autoComplete="email"
                 value={email}
+                maxLength={LIMITS.emailMax}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="h-10 px-3"
@@ -72,6 +74,7 @@ export function LoginForm() {
                 type="password"
                 autoComplete="current-password"
                 value={password}
+                maxLength={LIMITS.passwordMax}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="h-10 px-3"

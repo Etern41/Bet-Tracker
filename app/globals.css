@@ -97,6 +97,12 @@
     border-color: hsl(var(--border));
   }
 
+  /* Нативные select/option, если останутся в разметке — не белый фон в тёмной теме */
+  select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-size: 14px;
