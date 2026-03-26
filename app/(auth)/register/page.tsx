@@ -7,7 +7,7 @@ import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -77,7 +77,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-9"
+                className="h-10 px-3"
               />
             </div>
             <div className="space-y-2">
@@ -90,23 +90,23 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
-                className="h-9"
+                className="h-10 px-3"
               />
               <p className="text-xs text-muted-foreground">Минимум 8 символов</p>
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <div className="space-y-3 border-t border-border pt-4">
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Создание…" : "Зарегистрироваться"}
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                Уже есть аккаунт?{" "}
+                <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+                  Войти
+                </Link>
+              </p>
+            </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Создание…" : "Зарегистрироваться"}
-            </Button>
-            <p className="text-sm text-muted-foreground text-center">
-              Уже есть аккаунт?{" "}
-              <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-                Войти
-              </Link>
-            </p>
-          </CardFooter>
         </form>
       </Card>
     </div>

@@ -7,7 +7,7 @@ import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function LoginForm() {
   const router = useRouter();
@@ -62,7 +62,7 @@ export function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-9"
+                className="h-10 px-3"
               />
             </div>
             <div className="space-y-2">
@@ -74,22 +74,22 @@ export function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-9"
+                className="h-10 px-3"
               />
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <div className="space-y-3 border-t border-border pt-4">
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Вход…" : "Войти"}
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                Нет аккаунта?{" "}
+                <Link href="/register" className="text-primary underline-offset-4 hover:underline">
+                  Регистрация
+                </Link>
+              </p>
+            </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Вход…" : "Войти"}
-            </Button>
-            <p className="text-sm text-muted-foreground text-center">
-              Нет аккаунта?{" "}
-              <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-                Регистрация
-              </Link>
-            </p>
-          </CardFooter>
         </form>
       </Card>
     </div>

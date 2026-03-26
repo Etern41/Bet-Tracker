@@ -9,9 +9,12 @@ export async function middleware(request: NextRequest) {
   const isAppRoute = appPrefixes.some((p) => path === p || path.startsWith(`${p}/`));
   if (!isAppRoute) return NextResponse.next();
 
+  // Must match Auth.js cookie name: HTTPS → __Secure-authjs.session-token.
+  const secureCookie = request.nextUrl.protocol === "https:";
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secureCookie,
   });
 
   if (!token) {
