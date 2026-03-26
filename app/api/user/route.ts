@@ -1,6 +1,10 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { LIMITS, trimMax, validateDisplayNameInput } from "@/lib/validation";
+import {
+  LIMITS,
+  sanitizeLineInput,
+  validateDisplayNameInput,
+} from "@/lib/validation";
 
 export async function PATCH(request: Request) {
   const session = await auth();
@@ -28,7 +32,9 @@ export async function PATCH(request: Request) {
     );
     if (nameErr) return Response.json({ error: nameErr }, { status: 400 });
     const name =
-      nameRaw === null ? null : trimMax(nameRaw as string, LIMITS.displayName);
+      nameRaw === null
+        ? null
+        : sanitizeLineInput(nameRaw as string, LIMITS.displayName).trim() || null;
 
     const user = await prisma.user.update({
       where: { id: session.user.id },

@@ -9,7 +9,7 @@ import {
   BET_TYPE_FILTER_ITEMS,
 } from "@/lib/constants";
 import { FORM_FILTER_CONTROL } from "@/lib/form-field-classes";
-import { LIMITS } from "@/lib/validation";
+import { LIMITS, sanitizeSearchQueryField } from "@/lib/validation";
 
 export type BetFiltersState = {
   search: string;
@@ -37,8 +37,9 @@ export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Pro
 
   useEffect(() => {
     const t = setTimeout(() => {
+      const q = sanitizeSearchQueryField(localSearch);
       onChange((prev) =>
-        prev.search === localSearch ? prev : { ...prev, search: localSearch }
+        prev.search === q ? prev : { ...prev, search: q }
       );
     }, 300);
     return () => clearTimeout(t);
@@ -89,7 +90,9 @@ export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Pro
             className={FORM_FILTER_CONTROL}
             value={localSearch}
             maxLength={LIMITS.searchQuery}
-            onChange={(e) => setLocalSearch(e.target.value)}
+            onChange={(e) =>
+              setLocalSearch(sanitizeSearchQueryField(e.target.value))
+            }
           />
         </div>
         <BetFilterSelectRow

@@ -69,6 +69,68 @@ export const BET_STATUS_FILTER_ITEMS: BetFilterSelectItem[] = BET_STATUS_KEYS.ma
   (k) => ({ value: k, label: BET_STATUS_LABELS[k] })
 );
 
+/** Карта value → подпись для Base UI `items` и триггера (без сырого enum в поле). */
+export const BET_TYPE_SELECT_ITEMS: Record<string, string> = Object.fromEntries(
+  BET_TYPE_KEYS.map((k) => [k, BET_TYPE_LABELS[k]])
+);
+
+export const BET_STATUS_SELECT_ITEMS: Record<string, string> = Object.fromEntries(
+  BET_STATUS_KEYS.map((k) => [k, BET_STATUS_LABELS[k]])
+);
+
+/** Собрать Record для фильтра с пунктом «все». */
+export function betFilterSelectItems(
+  allToken: string,
+  allLabel: string,
+  items: readonly BetFilterSelectItem[]
+): Record<string, string> {
+  const r: Record<string, string> = { [allToken]: allLabel };
+  for (const i of items) {
+    r[i.value] = i.label;
+  }
+  return r;
+}
+
+/** Подпись выбранного значения по той же карте, что и пункты списка (enum — без учёта регистра). */
+export function labelFromSelectItems(
+  map: Record<string, string>,
+  value: unknown
+): string {
+  if (value == null) return "";
+  const s = String(value);
+  const hit = map[s];
+  if (hit != null) return hit;
+  const u = s.toUpperCase();
+  for (const [k, lab] of Object.entries(map)) {
+    if (k.toUpperCase() === u) return lab;
+  }
+  return s;
+}
+
+/** Читаемый fallback для ключа API (например soccer_england_league2). */
+export function humanizeOddsSportKey(key: string): string {
+  const k = key.trim();
+  if (!k) return "Лига / спорт";
+  const spaced = k.replace(/_/g, " ");
+  return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Подпись ключа спорта: название со ставки → словарь → список API → форматирование ключа.
+ */
+export function labelSportKeyForUi(
+  key: string,
+  storedSportTitle: string | undefined,
+  apiSports: readonly { key: string; title: string }[]
+): string {
+  const t = storedSportTitle?.trim();
+  if (t) return t;
+  if (SPORTS_RU[key]) return SPORTS_RU[key];
+  const fromApi = apiSports.find((x) => x.key === key)?.title;
+  if (fromApi) return fromApi;
+  return humanizeOddsSportKey(key);
+}
+
 /** Подпись для UI — никогда не показывать сырое значение enum. */
 export function labelBetType(code: string): string {
   return BET_TYPE_LABELS[code] ?? "Тип ставки";
@@ -78,13 +140,13 @@ export function labelBetStatus(code: string): string {
   return BET_STATUS_LABELS[code] ?? "Статус";
 }
 
-/** Для `itemToStringLabel` в Base UI Select (стабильная ссылка, не замыкание на каждый рендер). */
+/** Для `itemToStringLabel` / совместимости — та же карта, что у пунктов списка. */
 export function selectItemLabelBetType(v: unknown): string {
-  return labelBetType(String(v));
+  return labelFromSelectItems(BET_TYPE_SELECT_ITEMS, v);
 }
 
 export function selectItemLabelBetStatus(v: unknown): string {
-  return labelBetStatus(String(v));
+  return labelFromSelectItems(BET_STATUS_SELECT_ITEMS, v);
 }
 
 /** Подпись ключа спорта из API (Odds) для триггера Select. */
@@ -94,5 +156,5 @@ export function labelOddsSportApiKey(
 ): string {
   if (key == null) return "";
   const k = String(key);
-  return SPORTS_RU[k] ?? apiSports.find((x) => x.key === k)?.title ?? k;
+  return labelSportKeyForUi(k, undefined, apiSports);
 }

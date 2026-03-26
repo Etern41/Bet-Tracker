@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LIMITS, validateDisplayNameInput } from "@/lib/validation";
+import {
+  LIMITS,
+  sanitizeDisplayNameField,
+  validateDisplayNameInput,
+} from "@/lib/validation";
 
 type Props = {
   email: string;
@@ -79,7 +83,9 @@ export function SettingsClient({ email, initialName, oddsConfigured }: Props) {
                 className="h-9 min-w-0 max-w-full sm:max-w-md"
                 value={name}
                 maxLength={LIMITS.displayName}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) =>
+                  setName(sanitizeDisplayNameField(e.target.value))
+                }
                 placeholder="Ваше имя"
               />
             </div>

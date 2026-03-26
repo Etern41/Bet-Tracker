@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LIMITS } from "@/lib/validation";
+import {
+  LIMITS,
+  sanitizeEmailInput,
+  sanitizePasswordInput,
+} from "@/lib/validation";
 
 export function LoginForm() {
   const router = useRouter();
@@ -62,7 +66,7 @@ export function LoginForm() {
                 autoComplete="email"
                 value={email}
                 maxLength={LIMITS.emailMax}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(sanitizeEmailInput(e.target.value))}
                 required
                 className="h-10 px-3"
               />
@@ -75,7 +79,9 @@ export function LoginForm() {
                 autoComplete="current-password"
                 value={password}
                 maxLength={LIMITS.passwordMax}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(sanitizePasswordInput(e.target.value))
+                }
                 required
                 className="h-10 px-3"
               />

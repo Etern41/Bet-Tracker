@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -8,7 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BET_FILTER_ALL, type BetFilterSelectItem } from "@/lib/constants";
+import {
+  BET_FILTER_ALL,
+  betFilterSelectItems,
+  labelFromSelectItems,
+  type BetFilterSelectItem,
+} from "@/lib/constants";
 import { FORM_FILTER_CONTROL } from "@/lib/form-field-classes";
 import { cn } from "@/lib/utils";
 
@@ -32,13 +37,14 @@ export function BetFilterSelectRow({
 }: Props) {
   const selectValue = value === "" ? BET_FILTER_ALL : value;
 
-  const itemToStringLabel = useCallback(
-    (v: unknown) => {
-      if (v === BET_FILTER_ALL) return allLabel;
-      const s = String(v);
-      return items.find((i) => i.value === s)?.label ?? s;
-    },
+  const itemsMap = useMemo(
+    () => betFilterSelectItems(BET_FILTER_ALL, allLabel, items),
     [allLabel, items]
+  );
+
+  const formatLabel = useCallback(
+    (v: unknown) => labelFromSelectItems(itemsMap, v),
+    [itemsMap]
   );
 
   return (
@@ -46,16 +52,17 @@ export function BetFilterSelectRow({
       <label className="section-label mb-1 block">{fieldLabel}</label>
       <Select
         value={selectValue}
+        items={itemsMap}
         onValueChange={(v) =>
           onChange(!v || v === BET_FILTER_ALL ? "" : String(v))
         }
-        itemToStringLabel={itemToStringLabel}
+        itemToStringLabel={formatLabel}
       >
         <SelectTrigger
           size="sm"
           className={cn(FORM_FILTER_CONTROL, "px-3 font-normal")}
         >
-          <SelectValue />
+          <SelectValue>{formatLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={BET_FILTER_ALL}>{allLabel}</SelectItem>

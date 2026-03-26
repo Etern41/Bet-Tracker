@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { BetStatus, BetType, type Prisma } from "@prisma/client";
 import {
   LIMITS,
+  parseDecimalFromBody,
+  sanitizeLineInput,
+  sanitizeNotesInput,
   trimMax,
   validateExternalMatchId,
   validateMatchTitle,
@@ -48,9 +51,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     const data: Prisma.BetUpdateInput = {};
 
     if (typeof b.sport === "string") {
-      const e = validateSport(b.sport);
+      const t = sanitizeLineInput(b.sport, LIMITS.sport).trim();
+      const e = validateSport(t);
       if (e) return Response.json({ error: e }, { status: 400 });
-      data.sport = trimMax(b.sport, LIMITS.sport);
+      data.sport = t;
     }
     if (typeof b.sportKey === "string" || b.sportKey === null) {
       const raw = typeof b.sportKey === "string" ? b.sportKey : null;
@@ -59,27 +63,34 @@ export async function PATCH(request: Request, context: RouteContext) {
       data.sportKey = raw ? trimMax(raw, LIMITS.sportKey) : null;
     }
     if (typeof b.matchTitle === "string") {
-      const e = validateMatchTitle(b.matchTitle);
+      const t = sanitizeLineInput(b.matchTitle, LIMITS.matchTitle).trim();
+      const e = validateMatchTitle(t);
       if (e) return Response.json({ error: e }, { status: 400 });
-      data.matchTitle = trimMax(b.matchTitle, LIMITS.matchTitle);
+      data.matchTitle = t;
     }
     if (typeof b.homeTeam === "string" || b.homeTeam === null) {
       const t =
-        typeof b.homeTeam === "string" ? trimMax(b.homeTeam, LIMITS.team) : "";
+        typeof b.homeTeam === "string"
+          ? sanitizeLineInput(b.homeTeam, LIMITS.team).trim()
+          : "";
       const e = validateOptionalTeamField(t || undefined, "homeTeam");
       if (e) return Response.json({ error: e }, { status: 400 });
       data.homeTeam = typeof b.homeTeam === "string" ? t || null : null;
     }
     if (typeof b.awayTeam === "string" || b.awayTeam === null) {
       const t =
-        typeof b.awayTeam === "string" ? trimMax(b.awayTeam, LIMITS.team) : "";
+        typeof b.awayTeam === "string"
+          ? sanitizeLineInput(b.awayTeam, LIMITS.team).trim()
+          : "";
       const e = validateOptionalTeamField(t || undefined, "awayTeam");
       if (e) return Response.json({ error: e }, { status: 400 });
       data.awayTeam = typeof b.awayTeam === "string" ? t || null : null;
     }
     if (typeof b.league === "string" || b.league === null) {
       const t =
-        typeof b.league === "string" ? trimMax(b.league, LIMITS.league) : "";
+        typeof b.league === "string"
+          ? sanitizeLineInput(b.league, LIMITS.league).trim()
+          : "";
       const e = validateOptionalLeague(t || undefined);
       if (e) return Response.json({ error: e }, { status: 400 });
       data.league = typeof b.league === "string" ? t || null : null;
@@ -95,19 +106,27 @@ export async function PATCH(request: Request, context: RouteContext) {
       data.betType = b.betType as BetType;
     }
     if (typeof b.odds === "number" || typeof b.odds === "string") {
-      const o = Number(b.odds);
-      if (!Number.isNaN(o)) data.odds = o;
+      const o = parseDecimalFromBody(b.odds, "odds");
+      if (o == null) {
+        return Response.json({ error: "Некорректный коэффициент" }, { status: 400 });
+      }
+      data.odds = o;
     }
     if (typeof b.stake === "number" || typeof b.stake === "string") {
-      const s = Number(b.stake);
-      if (!Number.isNaN(s)) data.stake = s;
+      const s = parseDecimalFromBody(b.stake, "stake");
+      if (s == null) {
+        return Response.json({ error: "Некорректная сумма" }, { status: 400 });
+      }
+      data.stake = s;
     }
     if (typeof b.status === "string" && BET_STATUSES.has(b.status)) {
       data.status = b.status as BetStatus;
     }
     if (typeof b.notes === "string" || b.notes === null) {
       data.notes =
-        typeof b.notes === "string" ? trimMax(b.notes, LIMITS.notes) || null : null;
+        typeof b.notes === "string"
+          ? sanitizeNotesInput(b.notes, LIMITS.notes).trim() || null
+          : null;
     }
     if (typeof b.externalMatchId === "string" || b.externalMatchId === null) {
       const raw =
@@ -119,11 +138,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const nextOdds =
       b.odds !== undefined && (typeof b.odds === "number" || typeof b.odds === "string")
-        ? Number(b.odds)
+        ? parseDecimalFromBody(b.odds, "odds") ?? existing.odds
         : existing.odds;
     const nextStake =
       b.stake !== undefined && (typeof b.stake === "number" || typeof b.stake === "string")
-        ? Number(b.stake)
+        ? parseDecimalFromBody(b.stake, "stake") ?? existing.stake
         : existing.stake;
     let nextStatus = existing.status;
     if (typeof b.status === "string" && BET_STATUSES.has(b.status)) {

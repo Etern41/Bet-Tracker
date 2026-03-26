@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SPORTS_RU } from "@/lib/constants";
 import { FORM_FILTER_CONTROL } from "@/lib/form-field-classes";
-import { LIMITS } from "@/lib/validation";
+import { LIMITS, sanitizeSearchQueryField } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import {
   extractBestOdds,
@@ -243,7 +243,9 @@ export function MatchPicker({ open, onOpenChange, onSelect }: Props) {
             placeholder="Поиск по команде…"
             value={search}
             maxLength={LIMITS.searchQuery}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(sanitizeSearchQueryField(e.target.value))
+            }
             className={cn(FORM_FILTER_CONTROL, "max-w-full bg-background/80")}
           />
 

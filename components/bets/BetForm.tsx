@@ -26,14 +26,15 @@ import {
 import { MatchPicker, type MatchPickResult } from "@/components/bets/MatchPicker";
 import {
   BET_STATUS_KEYS,
+  BET_STATUS_SELECT_ITEMS,
   BET_TYPE_KEYS,
   BET_TYPE_LABELS,
+  BET_TYPE_SELECT_ITEMS,
   BET_STATUS_LABELS,
   MANUAL_SPORTS,
   SPORTS_RU,
-  labelOddsSportApiKey,
-  selectItemLabelBetStatus,
-  selectItemLabelBetType,
+  labelFromSelectItems,
+  labelSportKeyForUi,
 } from "@/lib/constants";
 import {
   FORM_FIELD_STACK,
@@ -47,7 +48,13 @@ import type { BetRow } from "@/components/bets/types";
 import {
   LIMITS,
   MAX_PROFIT_DISPLAY,
+  sanitizeDatetimeLocalInput,
+  sanitizeLineInput,
+  sanitizeLeagueField,
+  sanitizeMatchTitleField,
+  sanitizeNotesInput,
   sanitizeOddsInput,
+  sanitizeSportField,
   sanitizeStakeInput,
   validateMatchTitle,
   validateOdds,
@@ -106,9 +113,34 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const labelSportKeyForSelect = useCallback(
-    (k: unknown) => labelOddsSportApiKey(k, sportsApi),
-    [sportsApi]
+  const sportSelectItems = useMemo(() => {
+    const r: Record<string, string> = {};
+    for (const s of sportsApi) {
+      r[s.key] = SPORTS_RU[s.key] ?? s.title;
+    }
+    if (sportKey) {
+      r[sportKey] = labelSportKeyForUi(sportKey, sport || undefined, sportsApi);
+    }
+    return r;
+  }, [sportsApi, sportKey, sport]);
+
+  const formatSportSelect = useCallback(
+    (v: unknown) => {
+      if (v == null) return "Выберите лигу/спорт";
+      const s = String(v);
+      return sportSelectItems[s] ?? labelSportKeyForUi(s, sport || undefined, sportsApi);
+    },
+    [sportSelectItems, sport, sportsApi]
+  );
+
+  const formatBetTypeSelect = useCallback(
+    (v: unknown) => labelFromSelectItems(BET_TYPE_SELECT_ITEMS, v),
+    []
+  );
+
+  const formatBetStatusSelect = useCallback(
+    (v: unknown) => labelFromSelectItems(BET_STATUS_SELECT_ITEMS, v),
+    []
   );
 
   useEffect(() => {
@@ -218,12 +250,12 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
   }
 
   function onPick(m: MatchPickResult) {
-    setSport(m.sportDisplay);
+    setSport(sanitizeSportField(m.sportDisplay));
     setSportKey(m.sportKey);
-    setMatchTitle(m.matchTitle);
-    setHomeTeam(m.homeTeam);
-    setAwayTeam(m.awayTeam);
-    setLeague(m.league);
+    setMatchTitle(sanitizeMatchTitleField(m.matchTitle));
+    setHomeTeam(sanitizeLineInput(m.homeTeam, LIMITS.team));
+    setAwayTeam(sanitizeLineInput(m.awayTeam, LIMITS.team));
+    setLeague(sanitizeLeagueField(m.league ?? ""));
     setMatchDate(toDatetimeLocalValue(new Date(m.matchDate)));
     setExternalMatchId(m.externalMatchId);
     setSuggestedOdds(m.suggestedOdds);
@@ -299,24 +331,32 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 <div className={FORM_FIELD_STACK}>
                   <Select
                     value={sportKey ?? undefined}
+                    items={sportSelectItems}
                     onValueChange={(k) => {
                       if (k == null) return;
                       const key = String(k);
                       setSportKey(key);
-                      const s = sportsApi.find((x) => x.key === key);
-                      setSport(SPORTS_RU[key] ?? s?.title ?? "");
+                      setSport(labelSportKeyForUi(key, undefined, sportsApi));
                     }}
-                    itemToStringLabel={labelSportKeyForSelect}
+                    itemToStringLabel={formatSportSelect}
                   >
                     <SelectTrigger className={FORM_SELECT_TRIGGER}>
-                      <SelectValue placeholder="Выберите лигу/спорт" />
+                      <SelectValue placeholder="Выберите лигу/спорт">
+                        {formatSportSelect}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {sportsApi.map((s) => (
                         <SelectItem key={s.key} value={s.key}>
-                          {s.title}
+                          {SPORTS_RU[s.key] ?? s.title}
                         </SelectItem>
                       ))}
+                      {sportKey && !sportsApi.some((x) => x.key === sportKey) ? (
+                        <SelectItem key={sportKey} value={sportKey}>
+                          {sportSelectItems[sportKey] ??
+                            labelSportKeyForUi(sportKey, sport || undefined, sportsApi)}
+                        </SelectItem>
+                      ) : null}
                     </SelectContent>
                   </Select>
                   <Button
@@ -337,7 +377,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                     value={sport}
                     maxLength={LIMITS.sport}
                     onChange={(e) => {
-                      setSport(e.target.value);
+                      setSport(sanitizeSportField(e.target.value));
                       setSportKey(null);
                     }}
                     placeholder="Например, Футбол"
@@ -370,7 +410,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 className={FORM_INPUT_TEXT}
                 value={matchTitle}
                 maxLength={LIMITS.matchTitle}
-                onChange={(e) => setMatchTitle(e.target.value)}
+                onChange={(e) => setMatchTitle(sanitizeMatchTitleField(e.target.value))}
                 required
               />
               {oddsConfigured ? (
@@ -389,7 +429,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 className={FORM_INPUT_TEXT}
                 value={league}
                 maxLength={LIMITS.league}
-                onChange={(e) => setLeague(e.target.value)}
+                onChange={(e) => setLeague(sanitizeLeagueField(e.target.value))}
               />
               {fieldErrors.league ? (
                 <p className="text-sm text-destructive">{fieldErrors.league}</p>
@@ -402,7 +442,8 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 type="datetime-local"
                 className={FORM_INPUT}
                 value={matchDate}
-                onChange={(e) => setMatchDate(e.target.value)}
+                maxLength={LIMITS.datetimeLocalMaxLen}
+                onChange={(e) => setMatchDate(sanitizeDatetimeLocalInput(e.target.value))}
                 required
               />
               {fieldErrors.matchDate ? (
@@ -414,11 +455,12 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               <Label>Тип ставки</Label>
               <Select
                 value={betType}
+                items={BET_TYPE_SELECT_ITEMS}
                 onValueChange={(v) => setBetType(v as BetType)}
-                itemToStringLabel={selectItemLabelBetType}
+                itemToStringLabel={formatBetTypeSelect}
               >
                 <SelectTrigger className={FORM_SELECT_TRIGGER}>
-                  <SelectValue />
+                  <SelectValue>{formatBetTypeSelect}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {BET_TYPE_KEYS.map((t) => (
@@ -435,11 +477,10 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               <Input
                 className={`font-mono ${FORM_INPUT}`}
                 inputMode="decimal"
+                autoComplete="off"
                 value={odds}
                 maxLength={LIMITS.oddsInputMaxChars}
                 onChange={(e) => setOdds(sanitizeOddsInput(e.target.value))}
-                min={1.01}
-                step={0.01}
                 required
               />
               <p className="text-xs text-muted-foreground">Десятичный формат (напр. 1.85)</p>
@@ -462,11 +503,10 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               <Input
                 className={`font-mono ${FORM_INPUT}`}
                 inputMode="decimal"
+                autoComplete="off"
                 value={stake}
                 maxLength={LIMITS.stakeInputMaxChars}
                 onChange={(e) => setStake(sanitizeStakeInput(e.target.value))}
-                min={0.01}
-                step={0.01}
                 required
               />
               <p className="min-w-0 max-w-full break-words text-xs text-muted-foreground">
@@ -481,11 +521,12 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               <Label>Статус</Label>
               <Select
                 value={status}
+                items={BET_STATUS_SELECT_ITEMS}
                 onValueChange={(v) => setStatus(v as BetStatus)}
-                itemToStringLabel={selectItemLabelBetStatus}
+                itemToStringLabel={formatBetStatusSelect}
               >
                 <SelectTrigger className={FORM_SELECT_TRIGGER}>
-                  <SelectValue />
+                  <SelectValue>{formatBetStatusSelect}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {BET_STATUS_KEYS.map((s) => (
@@ -503,7 +544,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                 className={FORM_TEXTAREA}
                 maxLength={LIMITS.notes}
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => setNotes(sanitizeNotesInput(e.target.value, LIMITS.notes))}
               />
             </div>
 

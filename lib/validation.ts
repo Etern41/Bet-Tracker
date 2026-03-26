@@ -19,23 +19,50 @@ export const LIMITS = {
   oddsInputMaxChars: 9,
   /** До 1e9 + дробь */
   stakeInputMaxChars: 14,
+  /** Знаков после точки в коэффициенте */
+  oddsMaxFractionDigits: 3,
+  /** Знаков после точки в сумме */
+  stakeMaxFractionDigits: 2,
+  /** `datetime-local` в формате YYYY-MM-DDTHH:mm */
+  datetimeLocalMaxLen: 16,
 } as const;
 
 /** Потолок для отображения «возможной прибыли» в UI (защита от некорректных чисел). */
 export const MAX_PROFIT_DISPLAY = 1e15;
 
-/** Десятичное поле: цифры, одна точка, лимит длины. */
-export function clampDecimalInput(raw: string, maxLen: number): string {
+function limitDecimalFractionDigits(s: string, maxFrac: number): string {
+  const dot = s.indexOf(".");
+  if (dot === -1) return s;
+  const intPart = s.slice(0, dot + 1);
+  const frac = s.slice(dot + 1).replace(/\./g, "");
+  return intPart + frac.slice(0, maxFrac);
+}
+
+/**
+ * Только цифры и одна точка/запятая (запятая → точка), лимит длины и дробной части.
+ */
+export function clampDecimalInput(
+  raw: string,
+  maxLen: number,
+  maxFractionDigits?: number
+): string {
   const s0 = raw.replace(/[^\d.,]/g, "").replace(",", ".");
   const dot = s0.indexOf(".");
-  const s =
+  let s =
     dot === -1 ? s0 : s0.slice(0, dot + 1) + s0.slice(dot + 1).replace(/\./g, "");
+  if (maxFractionDigits !== undefined && maxFractionDigits >= 0) {
+    s = limitDecimalFractionDigits(s, maxFractionDigits);
+  }
   return s.length > maxLen ? s.slice(0, maxLen) : s;
 }
 
-/** Коэффициент в UI: длина + не выше oddsMax. */
+/** Коэффициент в UI: только цифры/точка, длина, дробь, потолок oddsMax. */
 export function sanitizeOddsInput(raw: string): string {
-  const s = clampDecimalInput(raw, LIMITS.oddsInputMaxChars);
+  const s = clampDecimalInput(
+    raw,
+    LIMITS.oddsInputMaxChars,
+    LIMITS.oddsMaxFractionDigits
+  );
   if (s === "" || s === ".") return s;
   const n = Number(s);
   if (!Number.isNaN(n) && n > LIMITS.oddsMax) {
@@ -44,15 +71,96 @@ export function sanitizeOddsInput(raw: string): string {
   return s;
 }
 
-/** Сумма в UI: длина + не выше stakeMax. */
+/** Сумма в UI: только цифры/точка, длина, дробь, потолок stakeMax. */
 export function sanitizeStakeInput(raw: string): string {
-  const s = clampDecimalInput(raw, LIMITS.stakeInputMaxChars);
+  const s = clampDecimalInput(
+    raw,
+    LIMITS.stakeInputMaxChars,
+    LIMITS.stakeMaxFractionDigits
+  );
   if (s === "" || s === ".") return s;
   const n = Number(s);
   if (!Number.isNaN(n) && n > LIMITS.stakeMax) {
     return String(LIMITS.stakeMax);
   }
   return s;
+}
+
+/** Однострочные поля (спорт, матч, лига, поиск): убрать управляющие символы и переносы. */
+export function sanitizeLineInput(raw: string, maxLen: number): string {
+  return raw
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/[\r\n\u2028\u2029]+/g, " ")
+    .slice(0, maxLen);
+}
+
+/** Заметки: допустим перевод строки, без прочих управляющих символов. */
+export function sanitizeNotesInput(raw: string, maxLen: number): string {
+  return raw
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .slice(0, maxLen);
+}
+
+export function sanitizeSportField(raw: string): string {
+  return sanitizeLineInput(raw, LIMITS.sport);
+}
+
+export function sanitizeMatchTitleField(raw: string): string {
+  return sanitizeLineInput(raw, LIMITS.matchTitle);
+}
+
+export function sanitizeLeagueField(raw: string): string {
+  return sanitizeLineInput(raw, LIMITS.league);
+}
+
+export function sanitizeSearchQueryField(raw: string): string {
+  return sanitizeLineInput(raw, LIMITS.searchQuery);
+}
+
+export function sanitizeDisplayNameField(raw: string): string {
+  return sanitizeLineInput(raw, LIMITS.displayName);
+}
+
+/** Email в поле ввода: без управляющих символов, лимит длины. */
+export function sanitizeEmailInput(raw: string): string {
+  return sanitizeLineInput(raw, LIMITS.emailMax);
+}
+
+/** Пароль: только убрать NUL и обрезать по лимиту (символы UTF-8 сохраняем). */
+export function sanitizePasswordInput(raw: string): string {
+  return raw.replace(/\u0000/g, "").slice(0, LIMITS.passwordMax);
+}
+
+/**
+ * Разбор odds/stake из тела запроса: только валидная десятичная строка, иначе null.
+ */
+/** Значение input type="datetime-local" (обрезка лишнего ввода). */
+export function sanitizeDatetimeLocalInput(raw: string): string {
+  return raw.slice(0, LIMITS.datetimeLocalMaxLen);
+}
+
+export function parseDecimalFromBody(
+  raw: unknown,
+  kind: "odds" | "stake"
+): number | null {
+  const maxLen =
+    kind === "odds" ? LIMITS.oddsInputMaxChars : LIMITS.stakeInputMaxChars;
+  const maxFrac =
+    kind === "odds"
+      ? LIMITS.oddsMaxFractionDigits
+      : LIMITS.stakeMaxFractionDigits;
+  if (typeof raw === "number") {
+    if (!Number.isFinite(raw)) return null;
+    return raw;
+  }
+  if (typeof raw !== "string") return null;
+  const s = clampDecimalInput(raw.trim(), maxLen, maxFrac);
+  if (s === "" || s === ".") return null;
+  if (!/^\d+(\.\d+)?$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

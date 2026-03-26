@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { BetStatus, BetType, type Prisma } from "@prisma/client";
 import {
   LIMITS,
+  parseDecimalFromBody,
+  sanitizeLineInput,
+  sanitizeNotesInput,
   trimMax,
   validateExternalMatchId,
   validateMatchTitle,
@@ -105,11 +108,17 @@ export async function POST(request: Request) {
     }
     const b = body as Record<string, unknown>;
 
-    const sport = typeof b.sport === "string" ? b.sport : "";
-    const matchTitle = typeof b.matchTitle === "string" ? b.matchTitle : "";
+    const sport =
+      typeof b.sport === "string"
+        ? sanitizeLineInput(b.sport, LIMITS.sport).trim()
+        : "";
+    const matchTitle =
+      typeof b.matchTitle === "string"
+        ? sanitizeLineInput(b.matchTitle, LIMITS.matchTitle).trim()
+        : "";
     const betType = typeof b.betType === "string" ? b.betType : "";
-    const odds = typeof b.odds === "number" ? b.odds : Number(b.odds);
-    const stake = typeof b.stake === "number" ? b.stake : Number(b.stake);
+    const odds = parseDecimalFromBody(b.odds, "odds");
+    const stake = parseDecimalFromBody(b.stake, "stake");
     const matchDateRaw = b.matchDate;
     const matchDate =
       typeof matchDateRaw === "string" || matchDateRaw instanceof Date
@@ -126,6 +135,12 @@ export async function POST(request: Request) {
     if (!matchDate || Number.isNaN(matchDate.getTime())) {
       return Response.json({ error: "Некорректная дата матча" }, { status: 400 });
     }
+    if (odds == null) {
+      return Response.json({ error: "Некорректный коэффициент" }, { status: 400 });
+    }
+    if (stake == null) {
+      return Response.json({ error: "Некорректная сумма" }, { status: 400 });
+    }
     const eOdds = validateOdds(odds);
     if (eOdds) return Response.json({ error: eOdds }, { status: 400 });
     const eStake = validateStake(stake);
@@ -135,14 +150,23 @@ export async function POST(request: Request) {
     const eSk = validateSportKey(sportKeyStr);
     if (eSk) return Response.json({ error: eSk }, { status: 400 });
 
-    const homeT = typeof b.homeTeam === "string" ? trimMax(b.homeTeam, LIMITS.team) : "";
-    const awayT = typeof b.awayTeam === "string" ? trimMax(b.awayTeam, LIMITS.team) : "";
+    const homeT =
+      typeof b.homeTeam === "string"
+        ? sanitizeLineInput(b.homeTeam, LIMITS.team).trim()
+        : "";
+    const awayT =
+      typeof b.awayTeam === "string"
+        ? sanitizeLineInput(b.awayTeam, LIMITS.team).trim()
+        : "";
     const eH = validateOptionalTeamField(homeT || undefined, "homeTeam");
     if (eH) return Response.json({ error: eH }, { status: 400 });
     const eA = validateOptionalTeamField(awayT || undefined, "awayTeam");
     if (eA) return Response.json({ error: eA }, { status: 400 });
 
-    const leagueStr = typeof b.league === "string" ? trimMax(b.league, LIMITS.league) : "";
+    const leagueStr =
+      typeof b.league === "string"
+        ? sanitizeLineInput(b.league, LIMITS.league).trim()
+        : "";
     const eL = validateOptionalLeague(leagueStr || undefined);
     if (eL) return Response.json({ error: eL }, { status: 400 });
 
@@ -150,7 +174,10 @@ export async function POST(request: Request) {
     const eExt = validateExternalMatchId(extId);
     if (eExt) return Response.json({ error: eExt }, { status: 400 });
 
-    const notesRaw = typeof b.notes === "string" ? trimMax(b.notes, LIMITS.notes) : "";
+    const notesRaw =
+      typeof b.notes === "string"
+        ? sanitizeNotesInput(b.notes, LIMITS.notes).trim()
+        : "";
 
     const statusRaw = typeof b.status === "string" ? b.status : "PENDING";
     const status = BET_STATUSES.has(statusRaw) ? (statusRaw as BetStatus) : BetStatus.PENDING;
