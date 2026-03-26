@@ -15,7 +15,45 @@ export const LIMITS = {
   passwordMax: 128,
   searchQuery: 200,
   displayName: 120,
+  /** Символы в поле ввода: 10000.99 → 7 символов; запас до 9 */
+  oddsInputMaxChars: 9,
+  /** До 1e9 + дробь */
+  stakeInputMaxChars: 14,
 } as const;
+
+/** Потолок для отображения «возможной прибыли» в UI (защита от некорректных чисел). */
+export const MAX_PROFIT_DISPLAY = 1e15;
+
+/** Десятичное поле: цифры, одна точка, лимит длины. */
+export function clampDecimalInput(raw: string, maxLen: number): string {
+  const s0 = raw.replace(/[^\d.,]/g, "").replace(",", ".");
+  const dot = s0.indexOf(".");
+  const s =
+    dot === -1 ? s0 : s0.slice(0, dot + 1) + s0.slice(dot + 1).replace(/\./g, "");
+  return s.length > maxLen ? s.slice(0, maxLen) : s;
+}
+
+/** Коэффициент в UI: длина + не выше oddsMax. */
+export function sanitizeOddsInput(raw: string): string {
+  const s = clampDecimalInput(raw, LIMITS.oddsInputMaxChars);
+  if (s === "" || s === ".") return s;
+  const n = Number(s);
+  if (!Number.isNaN(n) && n > LIMITS.oddsMax) {
+    return String(LIMITS.oddsMax);
+  }
+  return s;
+}
+
+/** Сумма в UI: длина + не выше stakeMax. */
+export function sanitizeStakeInput(raw: string): string {
+  const s = clampDecimalInput(raw, LIMITS.stakeInputMaxChars);
+  if (s === "" || s === ".") return s;
+  const n = Number(s);
+  if (!Number.isNaN(n) && n > LIMITS.stakeMax) {
+    return String(LIMITS.stakeMax);
+  }
+  return s;
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

@@ -15,7 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SPORTS_RU } from "@/lib/constants";
+import { FORM_FILTER_CONTROL } from "@/lib/form-field-classes";
 import { LIMITS } from "@/lib/validation";
+import { cn } from "@/lib/utils";
 import {
   extractBestOdds,
   parseBookmakersFromCache,
@@ -242,7 +244,7 @@ export function MatchPicker({ open, onOpenChange, onSelect }: Props) {
             value={search}
             maxLength={LIMITS.searchQuery}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 min-w-0 max-w-full border-border bg-background/80 dark:bg-input/40"
+            className={cn(FORM_FILTER_CONTROL, "max-w-full bg-background/80")}
           />
 
           <div className="min-h-[200px]">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import type { BetStatus, BetType } from "@prisma/client";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -24,37 +25,36 @@ import {
 } from "@/components/ui/select";
 import { MatchPicker, type MatchPickResult } from "@/components/bets/MatchPicker";
 import {
-  MANUAL_SPORTS,
+  BET_STATUS_KEYS,
+  BET_TYPE_KEYS,
   BET_TYPE_LABELS,
   BET_STATUS_LABELS,
+  MANUAL_SPORTS,
   SPORTS_RU,
-  labelBetType,
-  labelBetStatus,
+  labelOddsSportApiKey,
+  selectItemLabelBetStatus,
+  selectItemLabelBetType,
 } from "@/lib/constants";
+import {
+  FORM_FIELD_STACK,
+  FORM_INPUT,
+  FORM_INPUT_TEXT,
+  FORM_SELECT_TRIGGER,
+  FORM_TEXTAREA,
+} from "@/lib/form-field-classes";
 import { formatOdds } from "@/lib/utils";
 import type { BetRow } from "@/components/bets/types";
 import {
   LIMITS,
+  MAX_PROFIT_DISPLAY,
+  sanitizeOddsInput,
+  sanitizeStakeInput,
   validateMatchTitle,
   validateOdds,
   validateOptionalLeague,
   validateSport,
   validateStake,
 } from "@/lib/validation";
-
-function clampDecimalInput(raw: string, maxLen: number): string {
-  const s0 = raw.replace(/[^\d.,]/g, "").replace(",", ".");
-  const dot = s0.indexOf(".");
-  const s =
-    dot === -1 ? s0 : s0.slice(0, dot + 1) + s0.slice(dot + 1).replace(/\./g, "");
-  return s.length > maxLen ? s.slice(0, maxLen) : s;
-}
-
-const BET_TYPES = ["WINNER", "TOTAL_OVER", "TOTAL_UNDER", "HANDICAP", "BTTS"] as const;
-const BET_STATUSES = ["PENDING", "WON", "LOST", "VOID"] as const;
-
-type BetType = (typeof BET_TYPES)[number];
-type BetStatus = (typeof BET_STATUSES)[number];
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -105,6 +105,11 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const labelSportKeyForSelect = useCallback(
+    (k: unknown) => labelOddsSportApiKey(k, sportsApi),
+    [sportsApi]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -179,11 +184,17 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
     }
   }, [open, bet]);
 
-  const potentialProfit = useMemo(() => {
+  const potentialProfitText = useMemo(() => {
     const o = Number(odds.replace(",", "."));
     const s = Number(stake.replace(",", "."));
-    if (!Number.isFinite(o) || !Number.isFinite(s) || o <= 1 || s <= 0) return null;
-    return s * (o - 1);
+    if (!Number.isFinite(o) || !Number.isFinite(s) || o <= 1 || s <= 0) {
+      return "Возможная прибыль: —";
+    }
+    const p = s * (o - 1);
+    if (!Number.isFinite(p) || p < 0 || p > MAX_PROFIT_DISPLAY) {
+      return "Возможная прибыль: —";
+    }
+    return `Возможная прибыль: +${p.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} ₽`;
   }, [odds, stake]);
 
   function validate(): boolean {
@@ -274,10 +285,6 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
     }
   }
 
-  const inputClass =
-    "h-9 min-w-0 max-w-full overflow-x-auto px-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring dark:bg-input/45";
-  const inputTextClass = `${inputClass} break-all`;
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -286,28 +293,23 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
             <DialogTitle>{isEdit ? "Редактировать ставку" : "Добавить ставку"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={onSubmit} className="min-w-0 max-w-full space-y-4">
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Вид спорта</Label>
               {oddsConfigured && sportsApi.length > 0 && !sportManual ? (
-                <div className="space-y-2">
+                <div className={FORM_FIELD_STACK}>
                   <Select
                     value={sportKey ?? undefined}
                     onValueChange={(k) => {
                       if (k == null) return;
-                      setSportKey(k);
-                      const s = sportsApi.find((x) => x.key === k);
-                      setSport(SPORTS_RU[k] ?? s?.title ?? "");
+                      const key = String(k);
+                      setSportKey(key);
+                      const s = sportsApi.find((x) => x.key === key);
+                      setSport(SPORTS_RU[key] ?? s?.title ?? "");
                     }}
+                    itemToStringLabel={labelSportKeyForSelect}
                   >
-                    <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
-                      <SelectValue placeholder="Выберите лигу/спорт">
-                        {sportKey
-                          ? (sport.trim() ||
-                              SPORTS_RU[sportKey] ||
-                              sportsApi.find((x) => x.key === sportKey)?.title ||
-                              "Лига / спорт")
-                          : null}
-                      </SelectValue>
+                    <SelectTrigger className={FORM_SELECT_TRIGGER}>
+                      <SelectValue placeholder="Выберите лигу/спорт" />
                     </SelectTrigger>
                     <SelectContent>
                       {sportsApi.map((s) => (
@@ -328,10 +330,10 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className={FORM_FIELD_STACK}>
                   <Input
                     list="manual-sports"
-                    className={inputTextClass}
+                    className={FORM_INPUT_TEXT}
                     value={sport}
                     maxLength={LIMITS.sport}
                     onChange={(e) => {
@@ -362,10 +364,10 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Матч</Label>
               <Input
-                className={inputTextClass}
+                className={FORM_INPUT_TEXT}
                 value={matchTitle}
                 maxLength={LIMITS.matchTitle}
                 onChange={(e) => setMatchTitle(e.target.value)}
@@ -381,10 +383,10 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Лига (необязательно)</Label>
               <Input
-                className={inputTextClass}
+                className={FORM_INPUT_TEXT}
                 value={league}
                 maxLength={LIMITS.league}
                 onChange={(e) => setLeague(e.target.value)}
@@ -394,11 +396,11 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Дата матча</Label>
               <Input
                 type="datetime-local"
-                className={inputClass}
+                className={FORM_INPUT}
                 value={matchDate}
                 onChange={(e) => setMatchDate(e.target.value)}
                 required
@@ -408,14 +410,18 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Тип ставки</Label>
-              <Select value={betType} onValueChange={(v) => setBetType(v as BetType)}>
-                <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
-                  <SelectValue>{labelBetType(betType)}</SelectValue>
+              <Select
+                value={betType}
+                onValueChange={(v) => setBetType(v as BetType)}
+                itemToStringLabel={selectItemLabelBetType}
+              >
+                <SelectTrigger className={FORM_SELECT_TRIGGER}>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BET_TYPES.map((t) => (
+                  {BET_TYPE_KEYS.map((t) => (
                     <SelectItem key={t} value={t}>
                       {BET_TYPE_LABELS[t]}
                     </SelectItem>
@@ -424,14 +430,14 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Коэффициент</Label>
               <Input
-                className={`font-mono ${inputClass}`}
+                className={`font-mono ${FORM_INPUT}`}
                 inputMode="decimal"
                 value={odds}
-                maxLength={16}
-                onChange={(e) => setOdds(clampDecimalInput(e.target.value, 16))}
+                maxLength={LIMITS.oddsInputMaxChars}
+                onChange={(e) => setOdds(sanitizeOddsInput(e.target.value))}
                 min={1.01}
                 step={0.01}
                 required
@@ -451,36 +457,38 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Сумма ставки</Label>
               <Input
-                className={`font-mono ${inputClass}`}
+                className={`font-mono ${FORM_INPUT}`}
                 inputMode="decimal"
                 value={stake}
-                maxLength={18}
-                onChange={(e) => setStake(clampDecimalInput(e.target.value, 18))}
+                maxLength={LIMITS.stakeInputMaxChars}
+                onChange={(e) => setStake(sanitizeStakeInput(e.target.value))}
                 min={0.01}
                 step={0.01}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                {potentialProfit != null
-                  ? `Возможная прибыль: +${potentialProfit.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} ₽`
-                  : "Возможная прибыль: —"}
+              <p className="min-w-0 max-w-full break-words text-xs text-muted-foreground">
+                {potentialProfitText}
               </p>
               {fieldErrors.stake ? (
                 <p className="text-sm text-destructive">{fieldErrors.stake}</p>
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Статус</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as BetStatus)}>
-                <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
-                  <SelectValue>{labelBetStatus(status)}</SelectValue>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as BetStatus)}
+                itemToStringLabel={selectItemLabelBetStatus}
+              >
+                <SelectTrigger className={FORM_SELECT_TRIGGER}>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BET_STATUSES.map((s) => (
+                  {BET_STATUS_KEYS.map((s) => (
                     <SelectItem key={s} value={s}>
                       {BET_STATUS_LABELS[s]}
                     </SelectItem>
@@ -489,10 +497,10 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className={FORM_FIELD_STACK}>
               <Label>Заметки</Label>
               <Textarea
-                className="min-h-[80px] min-w-0 max-w-full border border-input rounded-md bg-background text-foreground dark:bg-input/45"
+                className={FORM_TEXTAREA}
                 maxLength={LIMITS.notes}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
