@@ -1,0 +1,20 @@
+export type BetRow = {
+  id: string;
+  userId: string;
+  sport: string;
+  sportKey: string | null;
+  matchTitle: string;
+  homeTeam: string | null;
+  awayTeam: string | null;
+  league: string | null;
+  matchDate: string;
+  betType: "WINNER" | "TOTAL_OVER" | "TOTAL_UNDER" | "HANDICAP" | "BTTS";
+  odds: number;
+  stake: number;
+  status: "PENDING" | "WON" | "LOST" | "VOID";
+  winnings: number | null;
+  notes: string | null;
+  externalMatchId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};

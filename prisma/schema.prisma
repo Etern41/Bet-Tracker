@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  bets         Bet[]
+}
+
+model Bet {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sport       String
+  sportKey    String?
+  matchTitle  String
+  homeTeam    String?
+  awayTeam    String?
+  league      String?
+  matchDate   DateTime
+
+  betType     BetType
+  odds        Float
+  stake       Float
+  status      BetStatus
+
+  winnings    Float?
+  notes       String?
+  externalMatchId String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum BetType {
+  WINNER
+  TOTAL_OVER
+  TOTAL_UNDER
+  HANDICAP
+  BTTS
+}
+
+enum BetStatus {
+  PENDING
+  WON
+  LOST
+  VOID
+}
+
+model MatchCache {
+  id           String   @id @default(cuid())
+  externalId   String   @unique
+  sportKey     String
+  sportTitle   String
+  homeTeam     String
+  awayTeam     String
+  commenceTime DateTime
+  oddsData     Json?
+  fetchedAt    DateTime @default(now())
+}
