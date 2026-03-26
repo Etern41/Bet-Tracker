@@ -130,9 +130,12 @@ export default function DashboardPage() {
     filters.status !== "";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted-foreground">Период (дата матча):</span>
+    <div className="min-w-0 space-y-6">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <span className="shrink-0 text-sm text-muted-foreground">
+          Период (дата матча):
+        </span>
+        <div className="flex min-w-0 flex-wrap gap-2">
         <Button
           type="button"
           size="sm"
@@ -165,6 +168,7 @@ export default function DashboardPage() {
         >
           Всё время
         </Button>
+        </div>
       </div>
 
       <FiltersBar value={filters} onChange={setFilters} sportsInData={sportsInData} sticky={false} />

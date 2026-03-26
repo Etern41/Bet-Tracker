@@ -320,7 +320,7 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] min-w-0 overflow-x-hidden overflow-y-auto border-border bg-card sm:max-w-lg">
+        <DialogContent className="max-h-[min(92dvh,100vh)] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] min-w-0 overflow-x-hidden overflow-y-auto border-border bg-card sm:max-w-lg sm:w-full">
           <DialogHeader>
             <DialogTitle>{isEdit ? "Редактировать ставку" : "Добавить ставку"}</DialogTitle>
           </DialogHeader>

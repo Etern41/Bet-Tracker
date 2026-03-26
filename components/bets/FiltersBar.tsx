@@ -74,16 +74,15 @@ export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Pro
     [sportOptions]
   );
 
+  const bleed =
+    "sticky top-0 z-10 -mx-3 mb-4 border-b border-border bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6";
+  const bleedFlat =
+    "-mx-3 mb-4 border-b border-border bg-background px-3 py-3 sm:-mx-4 sm:px-4 md:-mx-6 md:px-6";
+
   return (
-    <div
-      className={
-        sticky
-          ? "sticky top-0 z-10 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-6 md:px-6"
-          : "-mx-4 mb-4 border-b border-border bg-background px-4 py-3 md:-mx-6 md:px-6"
-      }
-    >
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[160px] flex-1">
+    <div className={sticky ? bleed : bleedFlat}>
+      <div className="flex min-w-0 flex-wrap items-end gap-3">
+        <div className="min-w-0 w-full flex-1 sm:min-w-[140px]">
           <label className="section-label mb-1 block">Поиск</label>
           <Input
             placeholder="Поиск по матчу…"
@@ -122,7 +121,7 @@ export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Pro
           allLabel="Все статусы"
           items={BET_STATUS_FILTER_ITEMS}
         />
-        <div className="min-w-[130px]">
+        <div className="min-w-0 w-full sm:w-auto sm:min-w-[130px]">
           <label className="section-label mb-1 block">С даты</label>
           <Input
             type="date"
@@ -133,7 +132,7 @@ export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Pro
             }
           />
         </div>
-        <div className="min-w-[130px]">
+        <div className="min-w-0 w-full sm:w-auto sm:min-w-[130px]">
           <label className="section-label mb-1 block">По дату</label>
           <Input
             type="date"

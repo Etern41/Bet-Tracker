@@ -48,7 +48,7 @@ export function BetFilterSelectRow({
   );
 
   return (
-    <div className="min-w-[160px]">
+    <div className="min-w-0 w-full sm:w-auto sm:min-w-[160px]">
       <label className="section-label mb-1 block">{fieldLabel}</label>
       <Select
         value={selectValue}

@@ -112,7 +112,7 @@
 
 @layer utilities {
   .page-title {
-    font-size: 20px;
+    font-size: clamp(1.0625rem, 3.5vw, 1.25rem);
     font-weight: 600;
     color: hsl(var(--foreground));
     line-height: 1.3;

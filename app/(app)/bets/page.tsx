@@ -144,7 +144,7 @@ export default function BetsPage() {
   const searchActive = Boolean(filters.search.trim());
 
   return (
-    <div>
+    <div className="min-w-0">
       <OddsApiBanner />
       <FiltersBar value={filters} onChange={setFilters} sportsInData={sportsInData} />
 

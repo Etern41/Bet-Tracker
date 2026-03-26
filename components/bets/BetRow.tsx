@@ -37,8 +37,8 @@ export function BetRow({ bet, onEdit, onDelete }: Props) {
       <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">
         {format(new Date(bet.matchDate), "dd.MM.yy", { locale: ru })}
       </td>
-      <td className="px-3 py-3">
-        <div className="font-semibold text-foreground">{bet.matchTitle}</div>
+      <td className="max-w-[min(280px,55vw)] px-3 py-3 md:max-w-none">
+        <div className="break-words font-semibold text-foreground">{bet.matchTitle}</div>
         {bet.league ? (
           <div className="text-xs text-muted-foreground">{bet.league}</div>
         ) : null}

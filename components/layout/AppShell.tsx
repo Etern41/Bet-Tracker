@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -40,6 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const title = useMemo(() => titleForPath(pathname), [pathname]);
   const [betDialogOpen, setBetDialogOpen] = useState(false);
   const [editBet, setEditBet] = useState<BetRow | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const openCreate = useCallback(() => {
     setEditBet(null);
@@ -53,13 +55,34 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const betUi = useMemo(() => ({ openCreate, openEdit }), [openCreate, openEdit]);
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
   return (
     <BetUiContext.Provider value={betUi}>
-      <div className="flex min-h-screen bg-background">
-        <Sidebar />
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          aria-label="Закрыть меню"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
+      <div className="flex min-h-screen min-h-dvh bg-background">
+        <Sidebar
+          mobileOpen={mobileNavOpen}
+          onNavigate={() => setMobileNavOpen(false)}
+        />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Header title={title} onAddBet={openCreate} />
-          <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+          <Header
+            title={title}
+            onAddBet={openCreate}
+            onOpenMenu={() => setMobileNavOpen(true)}
+          />
+          <main className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-4 md:p-6">
+            {children}
+          </main>
         </div>
       </div>
       <BetForm
