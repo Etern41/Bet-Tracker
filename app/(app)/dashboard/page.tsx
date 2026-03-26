@@ -8,22 +8,16 @@ import { StreakChart, type StreakPoint } from "@/components/dashboard/StreakChar
 import { RecentBets } from "@/components/dashboard/RecentBets";
 import { Button } from "@/components/ui/button";
 import { useBetUi } from "@/components/layout/AppShell";
+import { FiltersBar, type BetFiltersState } from "@/components/bets/FiltersBar";
 import type { DashboardStats, DayProfit, SportShare } from "@/lib/stats";
 import type { BetRow } from "@/components/bets/types";
-
-type Period = "7d" | "30d" | "90d" | "all";
-
-function statsQuery(period: Period): string {
-  const to = new Date();
-  if (period === "all") {
-    return `range=all&to=${encodeURIComponent(to.toISOString())}`;
-  }
-  const from = new Date(to);
-  if (period === "7d") from.setDate(from.getDate() - 7);
-  if (period === "30d") from.setDate(from.getDate() - 30);
-  if (period === "90d") from.setDate(from.getDate() - 90);
-  return `from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
-}
+import { BETS_MUTATION_EVENT } from "@/lib/bets-mutation";
+import { buildBetsListQuery, buildStatsQueryString } from "@/lib/bet-api-query";
+import {
+  applyLastDaysToFilters,
+  clearDateRangeInFilters,
+  createDashboardFiltersLastDays,
+} from "@/lib/dashboard-default-filters";
 
 function isBetRow(x: unknown): x is BetRow {
   if (typeof x !== "object" || x === null) return false;
@@ -33,7 +27,8 @@ function isBetRow(x: unknown): x is BetRow {
 
 export default function DashboardPage() {
   const { openCreate } = useBetUi();
-  const [period, setPeriod] = useState<Period>("30d");
+  const [filters, setFilters] = useState<BetFiltersState>(() => createDashboardFiltersLastDays(30));
+  const [sportsInData, setSportsInData] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [profitByDay, setProfitByDay] = useState<DayProfit[]>([]);
@@ -41,12 +36,35 @@ export default function DashboardPage() {
   const [streakSeries, setStreakSeries] = useState<StreakPoint[]>([]);
   const [recentBets, setRecentBets] = useState<BetRow[]>([]);
 
+  const fetchSportsList = useCallback(async () => {
+    try {
+      const res = await fetch("/api/bets/sports-list");
+      const data: unknown = await res.json();
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "sports" in data &&
+        Array.isArray((data as { sports: unknown }).sports)
+      ) {
+        setSportsInData((data as { sports: string[] }).sports);
+      }
+    } catch {
+      setSportsInData([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchSportsList();
+  }, [fetchSportsList]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const statsQs = buildStatsQueryString(filters);
+      const betsQs = buildBetsListQuery(filters, 1, 5);
       const [sRes, bRes] = await Promise.all([
-        fetch(`/api/stats?${statsQuery(period)}`),
-        fetch("/api/bets?limit=5&page=1"),
+        fetch(`/api/stats?${statsQs}`),
+        fetch(`/api/bets?${betsQs}`),
       ]);
       const sJson: unknown = await sRes.json();
       if (typeof sJson === "object" && sJson !== null && "stats" in sJson) {
@@ -89,37 +107,67 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [filters]);
 
   useEffect(() => {
-    load();
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const onMutated = () => {
+      void load();
+    };
+    window.addEventListener(BETS_MUTATION_EVENT, onMutated);
+    return () => window.removeEventListener(BETS_MUTATION_EVENT, onMutated);
   }, [load]);
 
   const empty = !loading && (stats?.totalBets ?? 0) === 0;
   const streak = stats?.currentStreak ?? 0;
+  const hasActiveFilters =
+    filters.search.trim() !== "" ||
+    filters.sport !== "" ||
+    filters.betType !== "" ||
+    filters.status !== "";
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {(
-          [
-            ["7d", "7 дней"],
-            ["30d", "30 дней"],
-            ["90d", "3 месяца"],
-            ["all", "Всё время"],
-          ] as const
-        ).map(([key, label]) => (
-          <Button
-            key={key}
-            type="button"
-            size="sm"
-            variant={period === key ? "default" : "outline"}
-            onClick={() => setPeriod(key)}
-          >
-            {label}
-          </Button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Период (дата матча):</span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setFilters((prev) => applyLastDaysToFilters(prev, 7))}
+        >
+          7 дней
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setFilters((prev) => applyLastDaysToFilters(prev, 30))}
+        >
+          30 дней
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setFilters((prev) => applyLastDaysToFilters(prev, 90))}
+        >
+          3 месяца
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setFilters((prev) => clearDateRangeInFilters(prev))}
+        >
+          Всё время
+        </Button>
       </div>
+
+      <FiltersBar value={filters} onChange={setFilters} sportsInData={sportsInData} sticky={false} />
 
       {empty ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-24 text-center">
@@ -135,8 +183,13 @@ export default function DashboardPage() {
             <line x1="24" y1="30" x2="40" y2="30" />
           </svg>
           <h2 className="mb-2 text-lg font-semibold text-foreground">
-            Начните отслеживать ставки
+            {hasActiveFilters ? "Нет ставок по выбранным фильтрам" : "Начните отслеживать ставки"}
           </h2>
+          <p className="mb-4 max-w-sm text-sm text-muted-foreground">
+            {hasActiveFilters
+              ? "Измените период, спорт, тип или статус — статистика и графики пересчитываются по тем же правилам, что список в «Мои ставки»."
+              : "Добавьте первую ставку или расширьте период «Всё время», если матчи были давно."}
+          </p>
           <Button type="button" onClick={openCreate}>
             + Добавить первую ставку
           </Button>

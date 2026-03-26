@@ -43,7 +43,7 @@ export function BetRow({ bet, onEdit, onDelete }: Props) {
           <div className="text-xs text-muted-foreground">{bet.league}</div>
         ) : null}
       </td>
-      <td className="hidden px-3 py-3 text-sm text-muted-foreground md:table-cell">
+      <td className="hidden px-3 py-3 text-sm text-foreground/75 md:table-cell">
         {bet.league ?? "—"}
       </td>
       <td className="px-3 py-3">

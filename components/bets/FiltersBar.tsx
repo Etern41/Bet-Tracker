@@ -18,9 +18,11 @@ type Props = {
   value: BetFiltersState;
   onChange: Dispatch<SetStateAction<BetFiltersState>>;
   sportsInData: string[];
+  /** false — без sticky (например, дашборд). По умолчанию true. */
+  sticky?: boolean;
 };
 
-export function FiltersBar({ value, onChange, sportsInData }: Props) {
+export function FiltersBar({ value, onChange, sportsInData, sticky = true }: Props) {
   const [localSearch, setLocalSearch] = useState(value.search);
 
   useEffect(() => {
@@ -61,7 +63,13 @@ export function FiltersBar({ value, onChange, sportsInData }: Props) {
   );
 
   return (
-    <div className="sticky top-0 z-10 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-6 md:px-6">
+    <div
+      className={
+        sticky
+          ? "sticky top-0 z-10 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-6 md:px-6"
+          : "-mx-4 mb-4 border-b border-border bg-background px-4 py-3 md:-mx-6 md:px-6"
+      }
+    >
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[160px] flex-1">
           <label className="section-label mb-1 block">Поиск</label>

@@ -13,6 +13,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { BetForm } from "@/components/bets/BetForm";
 import type { BetRow } from "@/components/bets/types";
+import { notifyBetsMutated } from "@/lib/bets-mutation";
 
 type BetUi = {
   openCreate: () => void;
@@ -69,6 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }}
         bet={editBet}
         onSaved={() => {
+          notifyBetsMutated();
           setBetDialogOpen(false);
           setEditBet(null);
         }}

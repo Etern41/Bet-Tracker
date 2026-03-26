@@ -15,6 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { MatchPicker, type MatchPickResult } from "@/components/bets/MatchPicker";
 import {
   MANUAL_SPORTS,
@@ -258,23 +265,26 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
               <Label>Вид спорта</Label>
               {oddsConfigured && sportsApi.length > 0 && !sportManual ? (
                 <div className="space-y-2">
-                  <select
-                    className={`w-full ${inputClass}`}
-                    value={sportKey ?? ""}
-                    onChange={(e) => {
-                      const k = e.target.value;
-                      setSportKey(k || null);
+                  <Select
+                    value={sportKey ?? undefined}
+                    onValueChange={(k) => {
+                      if (k == null) return;
+                      setSportKey(k);
                       const s = sportsApi.find((x) => x.key === k);
-                      setSport(k ? (SPORTS_RU[k] ?? s?.title ?? "") : "");
+                      setSport(SPORTS_RU[k] ?? s?.title ?? "");
                     }}
                   >
-                    <option value="">Выберите лигу/спорт</option>
-                    {sportsApi.map((s) => (
-                      <option key={s.key} value={s.key}>
-                        {s.title}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
+                      <SelectValue placeholder="Выберите лигу/спорт" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sportsApi.map((s) => (
+                        <SelectItem key={s.key} value={s.key}>
+                          {s.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     type="button"
                     variant="ghost"
@@ -362,17 +372,18 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
 
             <div className="space-y-2">
               <Label>Тип ставки</Label>
-              <select
-                className={`w-full ${inputClass}`}
-                value={betType}
-                onChange={(e) => setBetType(e.target.value as BetType)}
-              >
-                {BET_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {BET_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
+              <Select value={betType} onValueChange={(v) => setBetType(v as BetType)}>
+                <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BET_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {BET_TYPE_LABELS[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -424,17 +435,18 @@ export function BetForm({ open, onOpenChange, bet, onSaved }: Props) {
 
             <div className="space-y-2">
               <Label>Статус</Label>
-              <select
-                className={`w-full ${inputClass}`}
-                value={status}
-                onChange={(e) => setStatus(e.target.value as BetStatus)}
-              >
-                {BET_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {BET_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
+              <Select value={status} onValueChange={(v) => setStatus(v as BetStatus)}>
+                <SelectTrigger className="h-9 w-full min-w-0 px-3 font-normal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BET_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {BET_STATUS_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

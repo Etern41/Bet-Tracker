@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/utils";
 import type { BetRow } from "@/components/bets/types";
+import { notifyBetsMutated } from "@/lib/bets-mutation";
 
 type Props = {
   bet: BetRow | null;
@@ -37,6 +38,7 @@ export function DeleteBetDialog({ bet, open, onOpenChange, onConfirm }: Props) {
       }
       onOpenChange(false);
       toast.success("Ставка удалена");
+      notifyBetsMutated();
       onConfirm();
     } catch {
       toast.error("Ошибка сети", { duration: 5000 });

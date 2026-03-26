@@ -9,6 +9,8 @@ import { OddsApiBanner } from "@/components/bets/OddsApiBanner";
 import { Button } from "@/components/ui/button";
 import { useBetUi } from "@/components/layout/AppShell";
 import type { BetRow } from "@/components/bets/types";
+import { BETS_MUTATION_EVENT } from "@/lib/bets-mutation";
+import { buildBetsListQuery } from "@/lib/bet-api-query";
 
 function isBetRow(x: unknown): x is BetRow {
   if (typeof x !== "object" || x === null) return false;
@@ -71,18 +73,7 @@ export default function BetsPage() {
   const loadBets = useCallback(async () => {
     setLoading(true);
     try {
-      const q = new URLSearchParams();
-      q.set("page", String(page));
-      q.set("limit", "20");
-      const s = filters.search.trim();
-      if (s) q.set("search", s);
-      if (filters.sport) q.set("sport", filters.sport);
-      if (filters.betType) q.set("betType", filters.betType);
-      if (filters.status) q.set("status", filters.status);
-      if (filters.from) q.set("from", new Date(filters.from).toISOString());
-      if (filters.to) q.set("to", new Date(`${filters.to}T23:59:59.999`).toISOString());
-
-      const res = await fetch(`/api/bets?${q}`);
+      const res = await fetch(`/api/bets?${buildBetsListQuery(filters, page, 20)}`);
       const data: unknown = await res.json();
       if (
         typeof data !== "object" ||
@@ -122,11 +113,19 @@ export default function BetsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filters.search, filters.sport, filters.betType, filters.status, filters.from, filters.to]);
+  }, [page, filters]);
 
   useEffect(() => {
     fetchSportsList();
   }, [fetchSportsList]);
+
+  useEffect(() => {
+    const onMutated = () => {
+      void loadBets();
+    };
+    window.addEventListener(BETS_MUTATION_EVENT, onMutated);
+    return () => window.removeEventListener(BETS_MUTATION_EVENT, onMutated);
+  }, [loadBets]);
 
   useEffect(() => {
     const bumped = prevFilterKey.current !== null && prevFilterKey.current !== filterKey;

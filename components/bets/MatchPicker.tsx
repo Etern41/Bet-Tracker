@@ -198,12 +198,12 @@ export function MatchPicker({ open, onOpenChange, onSelect }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] border-border bg-card sm:max-w-lg md:max-w-2xl">
+      <DialogContent className="max-h-[90vh] min-w-0 max-w-[calc(100vw-2rem)] overflow-hidden border-border bg-card sm:max-w-lg md:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Выбрать матч</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="flex w-full gap-1 overflow-x-auto pb-2 whitespace-nowrap">
+        <div className="min-w-0 space-y-3">
+          <div className="flex max-w-full gap-1 overflow-x-auto overflow-y-hidden pb-2 [scrollbar-gutter:stable]">
             {tabSports.map((s) => (
               <Button
                 key={s.key}
@@ -240,7 +240,7 @@ export function MatchPicker({ open, onOpenChange, onSelect }: Props) {
             placeholder="Поиск по команде…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9"
+            className="h-9 border-border bg-background/80 dark:bg-input/40"
           />
 
           <div className="min-h-[200px]">
